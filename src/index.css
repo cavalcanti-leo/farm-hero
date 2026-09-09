@@ -1,5 +1,8 @@
-@import "tailwindcss";
-@config "../tailwind.config.js";
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   :root {
@@ -31,7 +34,7 @@
     --input: 260 40% 85%;
     --ring: 270 90% 60%;
 
-    --radius: 1.25rem;
+    --radius: 0rem; /* Pixel art: sem arredondamento */
   }
 
   /* Data Theme attribute styling override for global defaults */
@@ -56,11 +59,48 @@
   [data-theme="classic"] {
     color-scheme: light;
   }
+
+  [data-theme="emerald"] {
+    color-scheme: dark;
+    --background: 183 73% 7%;
+    --foreground: 135 55% 90%;
+    --card: 173 59% 10%;
+    --card-foreground: 135 55% 90%;
+    --primary: 162 40% 24%;
+    --primary-foreground: 135 55% 90%;
+    --border: 167 41% 24%;
+  }
+
+  [data-theme="sunset"] {
+    color-scheme: dark;
+    --background: 220 36% 13%;
+    --foreground: 16 100% 76%;
+    --card: 222 34% 21%;
+    --card-foreground: 0 0% 98%;
+    --primary: 352 64% 42%;
+    --primary-foreground: 0 0% 100%;
+    --border: 219 22% 28%;
+  }
+
+  [data-theme="brutalist"] {
+    color-scheme: light;
+    --background: 60 27% 93%;
+    --foreground: 228 17% 6%;
+    --card: 0 0% 100%;
+    --card-foreground: 228 17% 6%;
+    --primary: 76 95% 63%;
+    --primary-foreground: 228 17% 6%;
+    --border: 228 17% 6%;
+  }
 }
 
 @layer base {
   [data-theme="classic"] * {
-    border-color: #1e1b4b;
+    border-color: #000;
+  }
+  .dark [data-theme="classic"] *,
+  .dark * {
+    border-color: #334155 !important;
   }
   [data-theme="dark"] * {
     border-color: #334155;
@@ -69,14 +109,21 @@
     border-color: #e2e8f0;
   }
 
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+  }
+
   body {
-    @apply bg-slate-950 font-sans antialiased selection:bg-purple-500 selection:text-white flex items-center justify-center min-h-screen p-0;
+    @apply bg-slate-950 font-sans antialiased selection:bg-purple-500 selection:text-white;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* O scroll é gerenciado internamente por cada layout */
   }
-  @media (min-width: 640px) {
-    body {
-      @apply p-4;
-    }
-  }
+
   button,
   input[type="button"],
   input[type="reset"],
@@ -86,19 +133,157 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════════
+   PIXEL ART / RETRO WIN95 GLOBAL STYLES
+   ═══════════════════════════════════════════════════════ */
+
+/* Pixel font helper class */
+.font-pixel {
+  font-family: 'Press Start 2P', monospace;
+  image-rendering: pixelated;
+  letter-spacing: 0.05em;
+}
+
+/* Win95-style "inset" border (raised panel) */
+.pixel-border {
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  box-shadow: inset 1px 1px 0 #000, inset -1px -1px 0 #dfdfdf;
+}
+
+/* Win95-style raised button border */
+.pixel-btn {
+  border: 2px solid;
+  border-color: #ffffff #000000 #000000 #ffffff;
+  box-shadow: 1px 1px 0 0 #808080;
+  background: #c0c0c0;
+  color: #000;
+  cursor: pointer;
+  image-rendering: pixelated;
+}
+.pixel-btn:active {
+  border-color: #000000 #ffffff #ffffff #000000;
+  box-shadow: -1px -1px 0 0 #808080;
+  transform: translate(1px, 1px);
+}
+
+/* Hard pixel card — no border-radius, thick black outline */
+.pixel-card {
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0 #000;
+  border-radius: 0 !important;
+  image-rendering: pixelated;
+}
+
+/* Pixel "window" wrapper — like Win95 program window */
+.pixel-window {
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0 #000;
+  border-radius: 0 !important;
+  overflow: hidden;
+}
+
+/* Win95 title bar */
+.pixel-title-bar {
+  background: linear-gradient(to right, #000080, #1084d0);
+  color: #ffffff;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+
+/* Title bar window control buttons (□ - ×) */
+.pixel-title-btn {
+  width: 16px;
+  height: 14px;
+  border: 1px solid;
+  border-color: #fff #000 #000 #fff;
+  background: #c0c0c0;
+  color: #000;
+  font-size: 8px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  margin-left: 2px;
+  font-family: 'Arial', sans-serif;
+}
+
+/* Classic theme: grid background pixel art */
+[data-theme="classic"] .pixel-grid-bg {
+  background-color: #c8d8e8;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.12) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Pixel sprite rendering — important for sprite sheets */
+.pixel-sprite {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Pixel character breathing animation */
+@keyframes pixel-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-3px); }
+}
+
+/* Pixel blink / flash effect */
+@keyframes pixel-blink {
+  0%, 90%, 100% { opacity: 1; }
+  95% { opacity: 0; }
+}
+
+/* Pixel glow pulse */
+@keyframes pixel-glow {
+  0%, 100% { box-shadow: 0 0 4px 2px rgba(0, 200, 255, 0.5); }
+  50%       { box-shadow: 0 0 12px 5px rgba(0, 200, 255, 0.9); }
+}
+
+/* Pixel shake (for sad/sick states) */
+@keyframes pixel-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+.animate-pixel-float {
+  animation: pixel-float 1.6s ease-in-out infinite;
+}
+.animate-pixel-blink {
+  animation: pixel-blink 3s ease-in-out infinite;
+}
+.animate-pixel-glow {
+  animation: pixel-glow 2s ease-in-out infinite;
+}
+.animate-pixel-shake {
+  animation: pixel-shake 0.5s ease-in-out infinite;
+}
+
 /* Custom 3D Gamified Button & Card Shadows for Classic Theme */
 [data-theme="classic"] .btn-apk-3d {
-  box-shadow: 0px 5px 0px #1e1b4b;
+  box-shadow: 0px 4px 0px #000;
   transition: all 0.1s ease-in-out;
+  border-radius: 0 !important;
 }
 
 [data-theme="classic"] .btn-apk-3d:active {
   transform: translateY(3px);
-  box-shadow: 0px 2px 0px #1e1b4b;
+  box-shadow: 0px 1px 0px #000;
 }
 
 [data-theme="classic"] .card-apk-3d {
-  box-shadow: 0px 6px 0px #1e1b4b;
+  box-shadow: 0px 5px 0px #000;
+  border-radius: 0 !important;
 }
 
 /* Dark mode smooth shadows */
@@ -111,7 +296,7 @@
   box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* Scrollbar estilizada */
+/* Scrollbar estilizada — Desktop */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -123,5 +308,38 @@
 
 ::-webkit-scrollbar-thumb {
   background: #a855f7;
-  border-radius: 9999px;
+  border-radius: 0px; /* pixel style */
+}
+
+/* ── Modo Mobile Nativo: sem scrollbar visível ──────────── */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Safe Area (iPhone notch / home bar) ───────────────── */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* ── Desktop: body tela cheia ───────────────────────────────────── */
+@media (min-width: 768px) {
+  body {
+    display: block;
+    min-height: 100vh;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  #root {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
 }

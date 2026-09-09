@@ -5,11 +5,14 @@ export const ScrollArea = React.forwardRef<HTMLDivElement, React.HTMLAttributes<
   ({ className, children, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("relative overflow-auto max-h-96 pr-2 scrollbar-thin scrollbar-thumb-slate-700", className)}
+      className={cn(
+        "relative overflow-auto max-h-96 pr-2 scrollbar-thin scrollbar-thumb-slate-700",
+        className,
+      )}
       {...props}
     >
       {children}
     </div>
-  )
+  ),
 );
 ScrollArea.displayName = "ScrollArea";

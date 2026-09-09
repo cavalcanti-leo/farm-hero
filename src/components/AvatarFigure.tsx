@@ -1,99 +1,32 @@
 import React from "react";
 import { useAppState } from "@/lib/app-state";
-import avatarHeroImg from "@/assets/avatar-hero.png";
-import backyardImg from "@/assets/backyard.png";
-import { Sparkles, Shield, Crown, Zap } from "lucide-react";
+import { CustomAvatar } from "@/components/CustomAvatar";
+import { Crown, Zap } from "lucide-react";
 
 interface AvatarFigureProps {
   size?: "sm" | "md" | "lg";
   showStats?: boolean;
 }
 
-export const AvatarFigure: React.FC<AvatarFigureProps> = ({
-  size = "md",
-  showStats = true,
-}) => {
-  const {
-    level,
-    xp,
-    maxXp,
-    coins,
-    streakDays,
-    equippedHat,
-    equippedOutfit,
-    equippedPet,
-    equippedBackground,
-    items,
-  } = useAppState();
-
-  const hatItem = items.find((i) => i.id === equippedHat);
-  const outfitItem = items.find((i) => i.id === equippedOutfit);
-  const petItem = items.find((i) => i.id === equippedPet);
-  const bgItem = items.find((i) => i.id === equippedBackground);
+export const AvatarFigure: React.FC<AvatarFigureProps> = ({ size = "md", showStats = true }) => {
+  const { level, xp, maxXp, coins, streakDays, customAvatarConfig } = useAppState();
 
   const containerSizes = {
-    sm: "w-36 h-36",
-    md: "w-64 h-64",
-    lg: "w-80 h-80",
+    sm: "w-36 h-48",
+    md: "w-56 h-72",
+    lg: "w-72 h-96",
   };
 
   return (
     <div className="relative flex flex-col items-center justify-center group">
       {/* Background Container */}
       <div
-        className={`relative ${containerSizes[size]} rounded-3xl overflow-hidden shadow-2xl border-2 border-slate-700/60 transition-all duration-300 group-hover:border-blue-500/50 flex items-center justify-center bg-slate-900`}
+        className={`relative ${containerSizes[size]} rounded-3xl overflow-hidden shadow-xl border-4 border-slate-800 transition-all duration-300 flex items-center justify-center bg-slate-900/90 p-4`}
       >
-        {/* Background Image / Pattern */}
-        {equippedBackground === "bg-park" ? (
-          <img
-            src={backyardImg}
-            alt="Fundo Parque"
-            className="absolute inset-0 w-full h-full object-cover opacity-60 filter brightness-90 saturate-125"
-          />
-        ) : bgItem ? (
-          <div
-            className="absolute inset-0 opacity-40 transition-colors duration-500"
-            style={{
-              background: `radial-gradient(circle at center, ${bgItem.colorHex || "#3b82f6"} 0%, #0f172a 100%)`,
-            }}
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-950" />
-        )}
-
-        {/* Dynamic Glow Aura */}
-        <div className="absolute w-40 h-40 bg-blue-500/20 rounded-full blur-2xl animate-pulse pointer-events-none" />
-
-        {/* Pet Icon floating */}
-        {petItem && (
-          <div className="absolute bottom-3 right-3 text-3xl sm:text-4xl animate-bounce z-20 drop-shadow-md bg-slate-950/60 p-2 rounded-2xl border border-slate-700">
-            {petItem.icon}
-          </div>
-        )}
-
-        {/* Hat Icon Floating */}
-        {hatItem && (
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 text-3xl sm:text-4xl z-30 drop-shadow-lg animate-pulse">
-            {hatItem.icon}
-          </div>
-        )}
-
-        {/* Main Avatar Character Image */}
-        <div className="relative z-10 w-full h-full flex items-center justify-center p-2">
-          <img
-            src={avatarHeroImg}
-            alt="Hero Avatar"
-            className="max-h-full max-w-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover:scale-105"
-          />
+        {/* Main 2D Layered Character Avatar */}
+        <div className="relative z-10 w-full h-full flex items-center justify-center">
+          <CustomAvatar config={customAvatarConfig} className="w-full drop-shadow-md" />
         </div>
-
-        {/* Badge of Equipped Outfit */}
-        {outfitItem && (
-          <div className="absolute top-3 left-3 bg-slate-950/70 backdrop-blur-md px-2.5 py-1 rounded-xl text-xs font-semibold text-cyan-300 border border-cyan-500/30 flex items-center gap-1 z-20">
-            <span>{outfitItem.icon}</span>
-            <span>{outfitItem.name}</span>
-          </div>
-        )}
       </div>
 
       {/* Stats bar if enabled */}
@@ -125,7 +58,7 @@ export const AvatarFigure: React.FC<AvatarFigureProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 text-xs font-bold text-orange-400 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-orange-500/30 shadow-inner">
-              <Zap className="w-4 h-4 text-orange-400 fill-orange-400/30 animate-bounce" />
+              <Zap className="w-4 h-4 text-orange-400 fill-orange-400/30" />
               <span>{streakDays} Dias Seguidos</span>
             </div>
           </div>

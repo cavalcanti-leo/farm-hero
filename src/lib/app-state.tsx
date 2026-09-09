@@ -1,5 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "sonner";
+import { PixelAvatarConfig, DEFAULT_PIXEL_AVATAR } from "@/components/PixelAvatar32";
+import { CustomAvatarConfig, DEFAULT_CUSTOM_AVATAR } from "@/components/CustomAvatar";
 
 export interface WaterEntry {
   id: string;
@@ -112,6 +115,14 @@ interface AppState {
   // New: Pharmacist guidance toggle
   pharmacistActive: boolean;
 
+  // 2D Canvas/PNG Modular Character Avatar State
+  customAvatarConfig: CustomAvatarConfig;
+  updateCustomAvatarConfig: (cfg: Partial<CustomAvatarConfig>) => void;
+
+  // New: Pixel 32x32 customizable avatar state
+  pixelAvatarConfig: PixelAvatarConfig;
+  updatePixelAvatarConfig: (cfg: Partial<PixelAvatarConfig>) => void;
+
   // Actions
   addWater: (amountMl: number) => boolean;
   clearWaterLogs: () => void;
@@ -134,93 +145,124 @@ interface AppState {
   setPharmacistActive: (active: boolean) => void;
 }
 
-const DEFAULT_ITEMS: AvatarItem[] = [
-  { id: "hat-cap", name: "Boné Esportivo", category: "chapeu", price: 50, unlocked: true, icon: "🧢", colorHex: "#3b82f6" },
-  { id: "hat-crown", name: "Coroa Dourada", category: "chapeu", price: 200, unlocked: false, icon: "👑", colorHex: "#eab308" },
-  { id: "hat-headphones", name: "Fone Gamer", category: "chapeu", price: 120, unlocked: false, icon: "🎧", colorHex: "#a855f7" },
-  { id: "outfit-fit", name: "Traje Fitness", category: "roupa", price: 80, unlocked: true, icon: "👕", colorHex: "#10b981" },
-  { id: "outfit-armor", name: "Armadura Neon", category: "roupa", price: 300, unlocked: false, icon: "🛡️", colorHex: "#06b6d4" },
-  { id: "outfit-coat", name: "Jaleco Médico", category: "roupa", price: 150, unlocked: false, icon: "🥼", colorHex: "#f43f5e" },
-  { id: "pet-dog", name: "Rex (Cãozinho)", category: "pet", price: 150, unlocked: false, icon: "🐶", colorHex: "#f97316" },
-  { id: "pet-cat", name: "Miau (Gatinho)", category: "pet", price: 150, unlocked: false, icon: "🐱", colorHex: "#ec4899" },
-  { id: "pet-dragon", name: "Draco (Dragãozinho)", category: "pet", price: 500, unlocked: false, icon: "🐉", colorHex: "#84cc16" },
-  { id: "bg-park", name: "Parque Ensolarado", category: "fundo", price: 100, unlocked: true, icon: "🌳", colorHex: "#22c55e" },
-  { id: "bg-cyber", name: "Cidade Cyberpunk", category: "fundo", price: 250, unlocked: false, icon: "🌆", colorHex: "#6366f1" },
-  { id: "bg-beach", name: "Praia Tropical", category: "fundo", price: 180, unlocked: false, icon: "🏖️", colorHex: "#0ea5e9" },
-];
+const DEFAULT_ITEMS: AvatarItem[] = [];
 
 const DEFAULT_ACHIEVEMENTS: Achievement[] = [
-  { id: "ach-water-1", title: "Mestre da Hidratação", description: "Bebeu 2.000ml de água em um dia", rewardCoins: 50, rewardXp: 100, completed: false, progress: 40 },
-  { id: "ach-activity-1", title: "Primeiros Passos", description: "Completou 30 minutos de atividade física", rewardCoins: 80, rewardXp: 150, completed: false, progress: 60 },
-  { id: "ach-streak-3", title: "Foco Total", description: "Mantuve uma sequência de 3 dias ativos", rewardCoins: 100, rewardXp: 200, completed: true, progress: 100 },
-  { id: "ach-meds-all", title: "Pontualidade Vital", description: "Tomou todos os medicamentos do dia", rewardCoins: 60, rewardXp: 120, completed: false, progress: 50 },
-  { id: "ach-mood-journal", title: "Mente Sã", description: "Registrou o humor por 5 dias seguidos", rewardCoins: 75, rewardXp: 110, completed: false, progress: 20 },
+  {
+    id: "ach-water-1",
+    title: "Mestre da Hidratação",
+    description: "Bebeu 2.000ml de água em um dia",
+    rewardCoins: 50,
+    rewardXp: 100,
+    completed: false,
+    progress: 40,
+  },
+  {
+    id: "ach-activity-1",
+    title: "Primeiros Passos",
+    description: "Completou 30 minutos de atividade física",
+    rewardCoins: 80,
+    rewardXp: 150,
+    completed: false,
+    progress: 60,
+  },
+  {
+    id: "ach-streak-3",
+    title: "Foco Total",
+    description: "Mantuve uma sequência de 3 dias ativos",
+    rewardCoins: 100,
+    rewardXp: 200,
+    completed: true,
+    progress: 100,
+  },
+  {
+    id: "ach-meds-all",
+    title: "Pontualidade Vital",
+    description: "Tomou todos os medicamentos do dia",
+    rewardCoins: 60,
+    rewardXp: 120,
+    completed: false,
+    progress: 50,
+  },
+  {
+    id: "ach-mood-journal",
+    title: "Mente Sã",
+    description: "Registrou o humor por 5 dias seguidos",
+    rewardCoins: 75,
+    rewardXp: 110,
+    completed: false,
+    progress: 20,
+  },
 ];
 
 const AppContext = createContext<AppState | null>(null);
 
-const STORAGE_KEY = "vita_hero_app_state_v1";
+const getStorageKey = (userId?: string) =>
+  userId ? `farmhero_state_${userId}` : "vita_hero_app_state_v1";
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [level, setLevel] = useState<number>(3);
-  const [xp, setXp] = useState<number>(150);
-  const [maxXp, setMaxXp] = useState<number>(280);
-  const [coins, setCoins] = useState<number>(280);
-  const [streakDays, setStreakDays] = useState<number>(5);
+export const AppProvider: React.FC<{ children: React.ReactNode; userId?: string }> = ({
+  children,
+  userId,
+}) => {
+  const STORAGE_KEY = getStorageKey(userId);
 
-  const [equippedHat, setEquippedHat] = useState<string | null>("hat-cap");
-  const [equippedOutfit, setEquippedOutfit] = useState<string | null>("outfit-fit");
+  const [level, setLevel] = useState<number>(1);
+  const [xp, setXp] = useState<number>(0);
+  const [maxXp, setMaxXp] = useState<number>(100);
+  const [coins, setCoins] = useState<number>(0);
+  const [streakDays, setStreakDays] = useState<number>(0);
+
+  const [equippedHat, setEquippedHat] = useState<string | null>(null);
+  const [equippedOutfit, setEquippedOutfit] = useState<string | null>(null);
   const [equippedPet, setEquippedPet] = useState<string | null>(null);
-  const [equippedBackground, setEquippedBackground] = useState<string | null>("bg-park");
+  const [equippedBackground, setEquippedBackground] = useState<string | null>(null);
   const [items, setItems] = useState<AvatarItem[]>(DEFAULT_ITEMS);
+
+  // 2D Canvas/PNG Modular Character Avatar State
+  const [customAvatarConfig, setCustomAvatarConfig] = useState<CustomAvatarConfig>(DEFAULT_CUSTOM_AVATAR);
+
+  const updateCustomAvatarConfig = (cfg: Partial<CustomAvatarConfig>) => {
+    setCustomAvatarConfig((prev) => ({ ...prev, ...cfg }));
+    toast.success("Aparência do personagem atualizada!");
+  };
 
   // New state for pharmacist guidance
   const [pharmacistActive, setPharmacistActive] = useState<boolean>(false);
 
+  // New state for 32x32 customizable pixel avatar
+  const [pixelAvatarConfig, setPixelAvatarConfig] = useState<PixelAvatarConfig>(DEFAULT_PIXEL_AVATAR);
+
+  const updatePixelAvatarConfig = (cfg: Partial<PixelAvatarConfig>) => {
+    setPixelAvatarConfig((prev) => ({ ...prev, ...cfg }));
+    toast.success("Avatar pixel 32x32 personalizado!");
+  };
+
   const [waterGoalMl] = useState<number>(2500);
-  const [waterLogs, setWaterLogs] = useState<WaterEntry[]>([
-    { id: "w1", amountMl: 500, time: "08:30" },
-    { id: "w2", amountMl: 300, time: "10:15" },
-    { id: "w3", amountMl: 450, time: "13:00" },
-  ]);
+  const [waterLogs, setWaterLogs] = useState<WaterEntry[]>([]);
 
-  const [meals, setMeals] = useState<MealEntry[]>([
-    { id: "m1", name: "Ovos mexidos e suco verde", type: "café", calories: 350, time: "08:00" },
-    { id: "m2", name: "Frango grelhado com arroz integral e salada", type: "almoço", calories: 650, time: "12:30" },
-  ]);
+  const [meals, setMeals] = useState<MealEntry[]>([]);
 
-  const [activities, setActivities] = useState<ActivityEntry[]>([
-    { id: "a1", title: "Caminhada no parque", durationMinutes: 35, caloriesBurned: 180, time: "07:15" },
-  ]);
+  const [activities, setActivities] = useState<ActivityEntry[]>([]);
 
-  const [glucoseLogs, setGlucoseLogs] = useState<GlucoseEntry[]>([
-    { id: "g1", value: 95, timing: "Jejum", time: "07:00" },
-    { id: "g2", value: 125, timing: "Pós-refeição", time: "14:00" },
-  ]);
+  const [glucoseLogs, setGlucoseLogs] = useState<GlucoseEntry[]>([]);
 
-  const [pressureLogs, setPressureLogs] = useState<PressureEntry[]>([
-    { id: "p1", systolic: 120, diastolic: 80, pulse: 72, time: "08:10" },
-  ]);
+  const [pressureLogs, setPressureLogs] = useState<PressureEntry[]>([]);
 
-  const [moodLogs, setMoodLogs] = useState<MoodEntry[]>([
-    { id: "mo1", mood: "Bem", note: "Dia produtivo e com boa energia!", time: "09:00" },
-  ]);
+  const [moodLogs, setMoodLogs] = useState<MoodEntry[]>([]);
 
-  const [medications, setMedications] = useState<MedicationItem[]>([
-    { id: "med1", name: "Multivitamínico A-Z", dosage: "1 comprimido", scheduledTime: "08:00", taken: true },
-    { id: "med2", name: "Omega 3", dosage: "1000mg", scheduledTime: "12:30", taken: true },
-    { id: "med3", name: "Melatonina", dosage: "3mg", scheduledTime: "22:00", taken: false },
-  ]);
+  const [medications, setMedications] = useState<MedicationItem[]>([]);
 
   const [femaleLog, setFemaleLog] = useState<FemaleLog>({
-    cycleDay: 14,
+    cycleDay: 1,
     flow: "Nenhum",
-    symptoms: ["Energia alta", "Boa disposição"],
-    notes: "Fase ovulatória aproximada",
+    symptoms: [],
+    notes: "",
   });
 
   const [achievements, setAchievements] = useState<Achievement[]>(DEFAULT_ACHIEVEMENTS);
-  const [lastWaterResetDate, setLastWaterResetDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
+  const [lastWaterResetDate, setLastWaterResetDate] = useState<string>(
+    () => new Date().toISOString().split("T")[0],
+  );
   const [waterTimerTargetTimestamp, setWaterTimerTargetTimestamp] = useState<number | null>(null);
   const [waterTimerIntervalMinutes, setWaterTimerIntervalMinutes] = useState<number>(60);
   const [waterMinGoalBonusClaimed, setWaterMinGoalBonusClaimed] = useState<boolean>(false);
@@ -240,8 +282,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (parsed.equippedHat !== undefined) setEquippedHat(parsed.equippedHat);
         if (parsed.equippedOutfit !== undefined) setEquippedOutfit(parsed.equippedOutfit);
         if (parsed.equippedPet !== undefined) setEquippedPet(parsed.equippedPet);
-        if (parsed.equippedBackground !== undefined) setEquippedBackground(parsed.equippedBackground);
+        if (parsed.equippedBackground !== undefined)
+          setEquippedBackground(parsed.equippedBackground);
         if (parsed.pharmacistActive !== undefined) setPharmacistActive(parsed.pharmacistActive);
+        if (parsed.customAvatarConfig) setCustomAvatarConfig(parsed.customAvatarConfig);
+        if (parsed.pixelAvatarConfig) setPixelAvatarConfig(parsed.pixelAvatarConfig);
         if (parsed.items) setItems(parsed.items);
         if (parsed.waterLogs) setWaterLogs(parsed.waterLogs);
         if (parsed.meals) setMeals(parsed.meals);
@@ -253,10 +298,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (parsed.femaleLog) setFemaleLog(parsed.femaleLog);
         if (parsed.achievements) setAchievements(parsed.achievements);
         if (parsed.lastWaterResetDate) setLastWaterResetDate(parsed.lastWaterResetDate);
-        if (parsed.waterTimerTargetTimestamp !== undefined) setWaterTimerTargetTimestamp(parsed.waterTimerTargetTimestamp);
-        if (parsed.waterTimerIntervalMinutes) setWaterTimerIntervalMinutes(parsed.waterTimerIntervalMinutes);
-        if (parsed.waterMinGoalBonusClaimed !== undefined) setWaterMinGoalBonusClaimed(parsed.waterMinGoalBonusClaimed);
-        if (parsed.waterResetDisabledUntil !== undefined) setWaterResetDisabledUntil(parsed.waterResetDisabledUntil);
+        if (parsed.waterTimerTargetTimestamp !== undefined)
+          setWaterTimerTargetTimestamp(parsed.waterTimerTargetTimestamp);
+        if (parsed.waterTimerIntervalMinutes)
+          setWaterTimerIntervalMinutes(parsed.waterTimerIntervalMinutes);
+        if (parsed.waterMinGoalBonusClaimed !== undefined)
+          setWaterMinGoalBonusClaimed(parsed.waterMinGoalBonusClaimed);
+        if (parsed.waterResetDisabledUntil !== undefined)
+          setWaterResetDisabledUntil(parsed.waterResetDisabledUntil);
       }
     } catch (e) {
       console.error("Erro ao carregar estado local:", e);
@@ -285,57 +334,108 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     try {
       const stateToSave = {
-        level, xp, maxXp, coins, streakDays,
-        equippedHat, equippedOutfit, equippedPet, equippedBackground,
-        items, waterLogs, meals, activities, glucoseLogs,
-        pressureLogs, moodLogs, medications, femaleLog, achievements,
-        lastWaterResetDate, waterTimerTargetTimestamp, waterTimerIntervalMinutes,
-        waterMinGoalBonusClaimed, waterResetDisabledUntil
+        level,
+        xp,
+        maxXp,
+        coins,
+        streakDays,
+        equippedHat,
+        equippedOutfit,
+        equippedPet,
+        equippedBackground,
+        pharmacistActive,
+        customAvatarConfig,
+        pixelAvatarConfig,
+        items,
+        waterLogs,
+        meals,
+        activities,
+        glucoseLogs,
+        pressureLogs,
+        moodLogs,
+        medications,
+        femaleLog,
+        achievements,
+        lastWaterResetDate,
+        waterTimerTargetTimestamp,
+        waterTimerIntervalMinutes,
+        waterMinGoalBonusClaimed,
+        waterResetDisabledUntil,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
     } catch (e) {
       console.error("Erro ao salvar estado local:", e);
     }
   }, [
-    level, xp, maxXp, coins, streakDays, equippedHat, equippedOutfit,
-    equippedPet, equippedBackground, items, waterLogs, meals, activities,
-    glucoseLogs, pressureLogs, moodLogs, medications, femaleLog, achievements,
-    lastWaterResetDate, waterTimerTargetTimestamp, waterTimerIntervalMinutes,
-    waterMinGoalBonusClaimed, waterResetDisabledUntil
+    level,
+    xp,
+    maxXp,
+    coins,
+    streakDays,
+    equippedHat,
+    equippedOutfit,
+    equippedPet,
+    equippedBackground,
+    pharmacistActive,
+    items,
+    waterLogs,
+    meals,
+    activities,
+    glucoseLogs,
+    pressureLogs,
+    moodLogs,
+    medications,
+    femaleLog,
+    achievements,
+    lastWaterResetDate,
+    waterTimerTargetTimestamp,
+    waterTimerIntervalMinutes,
+    waterMinGoalBonusClaimed,
+    waterResetDisabledUntil,
   ]);
 
   const getXpNeededForLevel = (lvl: number): number => {
     switch (lvl) {
-      case 0: return 100;
-      case 1: return 100;
-      case 2: return 225;
-      case 3: return 280;
-      case 4: return 335;
-      case 5: return 500;
-      case 6: return 580;
-      case 7: return 700;
-      case 8: return 800;
-      default: return 900 + (lvl - 8) * 100;
+      case 0:
+        return 100;
+      case 1:
+        return 100;
+      case 2:
+        return 225;
+      case 3:
+        return 280;
+      case 4:
+        return 335;
+      case 5:
+        return 500;
+      case 6:
+        return 580;
+      case 7:
+        return 700;
+      case 8:
+        return 800;
+      default:
+        return 900 + (lvl - 8) * 100;
     }
   };
 
-const getTierBonus = (lvl: number): number => {
-  if (lvl <= 8) return 0.025; // Madeira
-  if (lvl <= 15) return 0.05; // Prata
-  if (lvl <= 25) return 0.10; // Ouro
-  if (lvl <= 49) return 0.15; // Platina
-  if (lvl <= 80) return 0.25; // Diamante
-  return 0.35; // Hero
-};
+  const getTierBonus = (lvl: number): number => {
+    if (lvl <= 8) return 0.025; // Madeira
+    if (lvl <= 15) return 0.05; // Prata
+    if (lvl <= 25) return 0.1; // Ouro
+    if (lvl <= 49) return 0.15; // Platina
+    if (lvl <= 80) return 0.25; // Diamante
+    return 0.35; // Hero
+  };
 
   const gainXpAndCoins = (xpAmount: number, coinsAmount: number, reason?: string) => {
     // Check if user is Top 1 (XP is higher than 80% of the next level's XP requirement)
     const currentMaxXp = getXpNeededForLevel(level);
     const isTop1 = xp > Math.round(currentMaxXp * 0.8);
-    
+
     let finalXp = xpAmount;
     let finalCoins = coinsAmount;
-    
+
     // Apply Top 1 bonus
     if (isTop1) {
       finalXp = Math.round(xpAmount * 1.05);
@@ -344,25 +444,42 @@ const getTierBonus = (lvl: number): number => {
 
     // Apply tier bonus (percentage increase on coins)
     const tierBonus = getTierBonus(level); // e.g., 0.025 for Madeira
-    const pharmacistBonus = pharmacistActive ? 0.05 : 0; // 5% extra coins if pharmacist guidance active
-    finalCoins = Math.round(finalCoins * (1 + tierBonus + pharmacistBonus));
+    const pharmacistBonus = pharmacistActive ? 0.05 : 0; // 5% extra XP e moedas se farmacêutico ativo
+
+    // 2% bonus on coins if daily missions are 100% completed today
+    let dailyMissionsBonus = 0;
+    try {
+      const todayKey = `dailyMissions_${new Date().toISOString().slice(0, 10)}`;
+      const stored = localStorage.getItem(todayKey);
+      if (stored) {
+        const claimed = JSON.parse(stored);
+        if (Array.isArray(claimed) && claimed.length >= 12) {
+          dailyMissionsBonus = 0.02; // +2% extra por finalizar 100% das missões
+        }
+      }
+    } catch {
+      // Ignore
+    }
+
+    finalCoins = Math.round(finalCoins * (1 + tierBonus + pharmacistBonus + dailyMissionsBonus));
+    finalXp = Math.round(finalXp * (1 + pharmacistBonus)); // +5% XP também
 
     setCoins((prev) => prev + finalCoins);
     setXp((prevXp) => {
       let newXp = prevXp + finalXp;
       let currentLevel = level;
       let targetMaxXp = getXpNeededForLevel(currentLevel);
-      
+
       while (newXp >= targetMaxXp) {
         newXp -= targetMaxXp;
         currentLevel += 1;
         targetMaxXp = getXpNeededForLevel(currentLevel);
-        
+
         toast.success(`🎉 PARABÉNS! Você subiu para o Nível ${currentLevel}!`, {
           description: "Você ganhou bônus de moedas e novos acessos!",
         });
       }
-      
+
       setLevel(currentLevel);
       setMaxXp(targetMaxXp);
       return newXp;
@@ -382,7 +499,8 @@ const getTierBonus = (lvl: number): number => {
 
     if (newTotal > 4000) {
       toast.error("🛑 Limite Máximo Saudável Atingido!", {
-        description: "O limite diário máximo seguro é de 4.000ml (4 Litros). Ingerir água em excesso pode causar intoxicação por água.",
+        description:
+          "O limite diário máximo seguro é de 4.000ml (4 Litros). Ingerir água em excesso pode causar intoxicação por água.",
       });
       return false;
     }
@@ -501,7 +619,7 @@ const getTierBonus = (lvl: number): number => {
           return { ...item, taken: nextState };
         }
         return item;
-      })
+      }),
     );
   };
 
@@ -525,9 +643,7 @@ const getTierBonus = (lvl: number): number => {
     }
 
     setCoins((prev) => prev - item.price);
-    setItems((prev) =>
-      prev.map((i) => (i.id === itemId ? { ...i, unlocked: true } : i))
-    );
+    setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, unlocked: true } : i)));
     toast.success(`🛍️ Você comprou '${item.name}'!`, {
       description: "Acesse a aba de Personalização para equipar seu item.",
     });
@@ -547,7 +663,7 @@ const getTierBonus = (lvl: number): number => {
     if (!ach || ach.completed) return;
 
     setAchievements((prev) =>
-      prev.map((a) => (a.id === achievementId ? { ...a, completed: true } : a))
+      prev.map((a) => (a.id === achievementId ? { ...a, completed: true } : a)),
     );
     gainXpAndCoins(ach.rewardXp, ach.rewardCoins, `Conquista '${ach.title}' desbloqueada!`);
   };
@@ -598,6 +714,10 @@ const getTierBonus = (lvl: number): number => {
         claimAchievement,
         pharmacistActive,
         setPharmacistActive,
+        customAvatarConfig,
+        updateCustomAvatarConfig,
+        pixelAvatarConfig,
+        updatePixelAvatarConfig,
         gainXpAndCoins,
       }}
     >

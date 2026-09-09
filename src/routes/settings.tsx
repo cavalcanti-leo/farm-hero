@@ -1,7 +1,17 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { useTheme, AppTheme } from "@/lib/theme-context";
+import { THEMES_LIST } from "@/lib/themes";
 import { useAppState } from "@/lib/app-state";
+import {
+  requestBrowserNotificationPermission,
+  addAppNotification,
+  useNotifications,
+  NOTIFICATION_CONFIG_OPTIONS,
+  isNotificationTypeEnabled,
+  setNotificationTypeEnabled,
+  NotificationConfigOption,
+} from "@/lib/notifications";
 import {
   ChevronLeft,
   User,
@@ -15,47 +25,44 @@ import {
   History,
   Download,
   Trash2,
-  ChevronRight,
   Check,
   Info,
-  HelpCircle,
-  Eye,
-  EyeOff,
   Droplets,
   Pill,
   Dumbbell,
+  Sparkles,
+  Zap,
+  TestTube,
+  Clock,
+  Target,
+  Trophy,
+  Smile,
+  Activity,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
-const THEME_OPTIONS: { id: AppTheme; label: string; desc: string; icon: React.ReactNode; preview: string }[] = [
-  {
-    id: "classic",
-    label: "Clássico",
-    desc: "Visual vibrante FarmHero com ciano, roxo e estilo 3D neo-brutalista.",
-    icon: <Palette className="w-5 h-5" />,
-    preview: "from-cyan-300 via-purple-300 to-indigo-400",
-  },
-  {
-    id: "light",
-    label: "Claro",
-    desc: "Cores suaves e fundo branco limpo para uso diurno confortável.",
-    icon: <Sun className="w-5 h-5" />,
-    preview: "from-white via-slate-100 to-purple-100",
-  },
-  {
-    id: "dark",
-    label: "Escuro",
-    desc: "Modo noturno com tons escuros elegantes para descansar os olhos.",
-    icon: <Moon className="w-5 h-5" />,
-    preview: "from-slate-900 via-indigo-950 to-slate-800",
-  },
-];
-
 export const SettingsRoute: React.FC = () => {
-  const { theme, setTheme } = useTheme();
+  const {
+    theme,
+    setTheme,
+    pageBgClass,
+    cardBgClass,
+    cardBorderClass,
+    textPrimaryClass,
+    textSecondaryClass,
+    inputBg,
+    inputBorder,
+    inputText,
+    inputPlaceholder,
+    bgStyle,
+    isDark,
+  } = useTheme();
   const { waterLogs, medications, activities } = useAppState();
+  const { addAppNotification: triggerNotif } = useNotifications();
 
-  // Selected tab from URL query params
+  // Selected tab state
   const [activeTab, setActiveTab] = useState<string>("todos");
 
   useEffect(() => {
@@ -63,28 +70,77 @@ export const SettingsRoute: React.FC = () => {
     const tab = params.get("tab");
     if (tab) {
       setActiveTab(tab);
-      const element = document.getElementById(`section-${tab}`);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
     }
   }, []);
+
+  const handleTabClick = (tabId: string) => {
+    setActiveTab(tabId);
+    if (tabId !== "todos") {
+      setTimeout(() => {
+        const el = document.getElementById(`section-${tabId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 50);
+    }
+  };
 
   // Profile state
   const [name, setName] = useState(() => localStorage.getItem("farmhero_name") || "");
   const [bio, setBio] = useState(() => localStorage.getItem("farmhero_bio") || "");
-  const [email, setEmail] = useState(() => localStorage.getItem("farmhero_email") || "usuario@farmhero.app");
+  const [email, setEmail] = useState(
+    () => localStorage.getItem("farmhero_email") || "usuario@farmhero.app",
+  );
   const [avatarPreview, setAvatarPreview] = useState<string | null>(
-    () => localStorage.getItem("farmhero_avatar_url") || null
+    () => localStorage.getItem("farmhero_avatar_url") || null,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Notifications state driven by NOTIFICATION_CONFIG_OPTIONS
+  const [notifSettings, setNotifSettings] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    NOTIFICATION_CONFIG_OPTIONS.forEach((opt) => {
+      const stored = localStorage.getItem(opt.storageKey);
+      initial[opt.storageKey] = stored === null ? opt.defaultEnabled : stored === "true";
+    });
+    return initial;
+  });
+
+  const handleToggleSetting = (storageKey: string, val: boolean) => {
+    setNotifSettings((prev) => ({ ...prev, [storageKey]: val }));
+    setNotificationTypeEnabled(storageKey, val);
+    if (storageKey === "notif_daily_reminder" && val) {
+      localStorage.removeItem("farmhero_last_daily_reminder_date");
+    }
+    toast.success("Preferência de notificação salva!");
+  };
+
+  const handleEnableAllNotifs = () => {
+    const next: Record<string, boolean> = {};
+    NOTIFICATION_CONFIG_OPTIONS.forEach((opt) => {
+      next[opt.storageKey] = true;
+      setNotificationTypeEnabled(opt.storageKey, true);
+    });
+    setNotifSettings(next);
+    toast.success("Todas as notificações foram ativadas!");
+  };
+
+  const handleDisableAllNotifs = () => {
+    const next: Record<string, boolean> = {};
+    NOTIFICATION_CONFIG_OPTIONS.forEach((opt) => {
+      next[opt.storageKey] = false;
+      setNotificationTypeEnabled(opt.storageKey, false);
+    });
+    setNotifSettings(next);
+    toast.success("Todas as notificações foram desativadas!");
+  };
+
   // Privacy toggles
   const [hideProfile, setHideProfile] = useState(
-    () => localStorage.getItem("farmhero_hide_profile") === "true"
+    () => localStorage.getItem("farmhero_hide_profile") === "true",
   );
   const [dataAnalytics, setDataAnalytics] = useState(
-    () => localStorage.getItem("farmhero_analytics") !== "false"
+    () => localStorage.getItem("farmhero_analytics") !== "false",
   );
 
   const handleSaveProfile = () => {
@@ -102,8 +158,40 @@ export const SettingsRoute: React.FC = () => {
     reader.onload = (ev) => {
       const result = ev.target?.result as string;
       setAvatarPreview(result);
+      localStorage.setItem("farmhero_avatar_url", result);
+      toast.success("Foto de perfil carregada!");
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleRequestBrowserNotifs = async () => {
+    const granted = await requestBrowserNotificationPermission();
+    if (granted) {
+      toast.success("🔔 Notificações do navegador ativadas!");
+    } else {
+      toast.error("Permissão de notificação negada ou não suportada no navegador.");
+    }
+  };
+
+  const handleTestNotification = () => {
+    // Envia um teste para o primeiro tipo que estiver ativado
+    const activeOpt = NOTIFICATION_CONFIG_OPTIONS.find((opt) => notifSettings[opt.storageKey]);
+    if (!activeOpt) {
+      toast.warning("Todas as notificações estão desativadas. Ative pelo menos uma para testar!");
+      return;
+    }
+
+    const testNotif = triggerNotif({
+      type: activeOpt.type,
+      title: `${activeOpt.icon} Teste: ${activeOpt.label}`,
+      message: `Esta é uma notificação de teste confirmando que a categoria "${activeOpt.label}" está ativa e configurada corretamente!`,
+      actionUrl: "/settings?tab=notificacoes",
+      icon: activeOpt.icon,
+    });
+
+    if (testNotif) {
+      toast.success(`Notificação de teste enviada (${activeOpt.label})!`);
+    }
   };
 
   const handleExportData = () => {
@@ -119,54 +207,24 @@ export const SettingsRoute: React.FC = () => {
       a.href = url;
       a.download = `farmhero_backup_${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
-      toast.success("Backup baixado com sucesso!");
+      toast.success("Backup de dados exportado com sucesso!");
     } catch {
       toast.error("Erro ao exportar dados.");
     }
   };
 
   const handleResetData = () => {
-    if (confirm("Tem certeza que deseja redefinir todo o progresso do aplicativo?")) {
-      localStorage.removeItem("vita_hero_app_state_v1");
+    if (confirm("⚠️ Tem certeza que deseja redefinir todo o progresso do aplicativo?")) {
+      localStorage.clear();
       window.location.reload();
     }
   };
 
-  // Theme-aware styles
-  const isDark = theme === "dark";
-  const isLight = theme === "light";
-
-  const pageBg = isDark
-    ? "bg-slate-900 text-white"
-    : isLight
-    ? "bg-slate-50 text-slate-900"
-    : "bg-gradient-to-b from-cyan-100 to-purple-50 text-slate-900";
-
-  const cardBg = isDark
-    ? "bg-slate-800 border-slate-700 text-white shadow-[3px_3px_0px_#0f172a]"
-    : isLight
-    ? "bg-white border-slate-200 text-slate-900 shadow-md"
-    : "bg-white border-indigo-950 text-slate-900 shadow-[3px_3px_0px_#1e1b4b]";
-
-  const inputCls = isDark
-    ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
-    : isLight
-    ? "bg-white border-slate-300 text-slate-900 placeholder-slate-400"
-    : "bg-slate-50 border-indigo-950 text-slate-900 placeholder-slate-400";
-
-  const textSub = isDark ? "text-slate-400" : isLight ? "text-slate-500" : "text-slate-600";
-
-  const sectionTitle = isDark
-    ? "text-slate-400 uppercase tracking-widest text-[10px] font-black"
-    : isLight
-    ? "text-slate-400 uppercase tracking-widest text-[10px] font-black"
-    : "text-indigo-400 uppercase tracking-widest text-[10px] font-black";
-
-  const buttonPrimary = isDark
-    ? "bg-purple-600 hover:bg-purple-700 text-white border-slate-700"
-    : isLight
-    ? "bg-purple-600 hover:bg-purple-700 text-white border-purple-700"
-    : "bg-purple-600 hover:bg-purple-700 text-white border-indigo-950 shadow-[2px_2px_0px_#1e1b4b]";
+  // Theme-aware styles from central theme context
+  const cardBg = `${cardBgClass} ${cardBorderClass}`;
+  const inputCls = `${inputBg} ${inputBorder} ${inputText} ${inputPlaceholder}`;
+  const textSub = textSecondaryClass;
+  const sectionTitle = `uppercase tracking-widest text-[11px] font-black ${textPrimaryClass} opacity-80`;
 
   const filterTabs = [
     { id: "todos", label: "Todos" },
@@ -181,10 +239,10 @@ export const SettingsRoute: React.FC = () => {
   const shouldShow = (id: string) => activeTab === "todos" || activeTab === id;
 
   return (
-    <div className={`p-4 space-y-5 pb-10 min-h-full ${pageBg}`}>
+    <div className={`p-4 space-y-5 pb-10 min-h-full ${pageBgClass}`} style={bgStyle}>
       {/* Top Header */}
       <div className="flex items-center gap-3 pt-1">
-        <Link href="/mais">
+        <Link href="/">
           <button
             className={`w-9 h-9 rounded-xl border-2 flex items-center justify-center active:scale-95 transition-transform ${
               isDark
@@ -206,13 +264,13 @@ export const SettingsRoute: React.FC = () => {
         {filterTabs.map((t) => (
           <button
             key={t.id}
-            onClick={() => setActiveTab(t.id)}
-            className={`px-3 py-1.5 rounded-full text-xs font-black shrink-0 transition-all border ${
+            onClick={() => handleTabClick(t.id)}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-black shrink-0 transition-all border ${
               activeTab === t.id
-                ? "bg-purple-600 text-white border-indigo-950 shadow-[1px_1px_0px_#1e1b4b]"
+                ? "bg-purple-600 text-white border-indigo-950 shadow-[2px_2px_0px_#1e1b4b]"
                 : isDark
-                ? "bg-slate-800 text-slate-400 border-slate-700"
-                : "bg-white text-slate-600 border-slate-200"
+                  ? "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700"
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-gray-100"
             }`}
           >
             {t.label}
@@ -235,122 +293,157 @@ export const SettingsRoute: React.FC = () => {
                   {avatarPreview ? (
                     <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <User className={`w-9 h-9 ${isDark ? "text-slate-400" : "text-slate-300"}`} />
+                    <User className="w-10 h-10 text-slate-400" />
                   )}
                 </div>
                 <button
+                  type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-purple-600 border-2 border-white flex items-center justify-center shadow"
+                  className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-purple-600 text-white border-2 border-white flex items-center justify-center shadow hover:bg-purple-700 transition-colors"
                 >
-                  <Camera className="w-3.5 h-3.5 text-white" />
+                  <Camera className="w-3.5 h-3.5" />
                 </button>
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
-                  className="hidden"
                   onChange={handleAvatarChange}
+                  className="hidden"
                 />
               </div>
-              <div className="flex-1">
-                <p className="text-xs font-black">Foto de Perfil</p>
-                <p className={`text-[10px] font-bold ${textSub}`}>
-                  Toque na câmera para carregar uma imagem
-                </p>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-black">{name || "Usuário FarmHero"}</p>
+                <p className={`text-xs font-semibold ${textSub}`}>{email}</p>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-[11px] font-black text-purple-500 hover:underline"
+                >
+                  Alterar foto de perfil
+                </button>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className={`text-xs font-black block ${textSub}`}>Nome Completo</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Seu nome"
-                className={`w-full rounded-xl border-2 px-3 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-purple-400 ${inputCls}`}
-              />
-            </div>
+            <div className="space-y-3 pt-2">
+              <div className="space-y-1">
+                <label className="text-xs font-black block">Nome de Exibição</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Seu nome ou apelido de Herói"
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold border ${inputCls}`}
+                />
+              </div>
 
-            <div className="space-y-1">
-              <label className={`text-xs font-black block ${textSub}`}>E-mail de Contato</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seuemail@exemplo.com"
-                className={`w-full rounded-xl border-2 px-3 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-purple-400 ${inputCls}`}
-              />
-            </div>
+              <div className="space-y-1">
+                <label className="text-xs font-black block">E-mail de Contato</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu.email@exemplo.com"
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold border ${inputCls}`}
+                />
+              </div>
 
-            <div className="space-y-1">
-              <label className={`text-xs font-black block ${textSub}`}>Biografia / Meta de Saúde</label>
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="Ex: Focado em beber 2L de água e manter exames em dia..."
-                rows={2}
-                className={`w-full rounded-xl border-2 px-3 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none ${inputCls}`}
-              />
-            </div>
+              <div className="space-y-1">
+                <label className="text-xs font-black block">Bio / Lema de Saúde</label>
+                <input
+                  type="text"
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Ex: Focado em beber 2L de água todo dia! 🚀"
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold border ${inputCls}`}
+                />
+              </div>
 
-            <button
-              onClick={handleSaveProfile}
-              className={`w-full py-2.5 font-black text-sm rounded-xl border-2 transition-all active:scale-[.98] ${buttonPrimary}`}
-            >
-              Salvar Dados do Perfil
-            </button>
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs rounded-xl border-2 border-indigo-950 shadow-sm active:scale-95 transition-all"
+              >
+                Salvar Alterações de Perfil
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ── 2. APARÊNCIA & TEMA ── */}
+      {/* ── 2. SELEÇÃO DE TEMA ── */}
       {shouldShow("tema") && (
         <div id="section-tema" className="space-y-2">
           <p className={sectionTitle}>🎨 Aparência & Tema</p>
           <div className={`rounded-3xl border-2 p-4 space-y-3 ${cardBg}`}>
-            <p className={`text-[11px] font-bold ${textSub}`}>
-              Alterne o tema do aplicativo. As cores dos botões, menus e fundos se adaptam automaticamente.
+            <p className={`text-xs font-bold ${textSub}`}>
+              Escolha a paleta de cores que melhor combina com você.
             </p>
-
-            <div className="space-y-2.5">
-              {THEME_OPTIONS.map((opt) => {
-                const active = theme === opt.id;
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {THEMES_LIST.map((opt) => {
+                const isSelected = theme === opt.id;
                 return (
                   <button
                     key={opt.id}
                     type="button"
-                    onClick={() => setTheme(opt.id)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition-all active:scale-[.98] ${
-                      active
-                        ? "border-purple-500 bg-purple-50 dark:bg-purple-950/40 shadow-[2px_2px_0px_#7c3aed]"
+                    onClick={() => {
+                      setTheme(opt.id);
+                      toast.success(`Tema ${opt.label} ativado!`);
+                    }}
+                    className={`w-full p-3.5 rounded-2xl border-2 flex flex-col justify-between text-left transition-all relative overflow-hidden ${
+                      isSelected
+                        ? "bg-purple-500/10 border-purple-500 ring-2 ring-purple-500/50 shadow-md"
                         : isDark
-                        ? "border-slate-600 bg-slate-700 hover:border-slate-500"
-                        : "border-slate-200 bg-slate-50 hover:border-purple-200 hover:bg-purple-50"
+                          ? "bg-slate-800/80 border-slate-700 hover:border-slate-500"
+                          : "bg-gray-50 border-gray-200 hover:bg-gray-100"
                     }`}
                   >
-                    <div
-                      className={`w-12 h-9 rounded-xl bg-gradient-to-br ${opt.preview} border-2 ${
-                        active ? "border-purple-400" : "border-slate-300"
-                      } shrink-0`}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className={active ? "text-purple-500 font-bold" : isDark ? "text-white" : "text-slate-800"}>
-                          {opt.icon}
-                        </span>
-                        <span className={`text-sm font-black ${active ? "text-purple-500" : isDark ? "text-white" : "text-slate-800"}`}>
-                          {opt.label}
-                        </span>
+                    <div className="flex items-start justify-between gap-2 w-full">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold ${
+                            isSelected
+                              ? "bg-purple-600 text-white"
+                              : isDark
+                                ? "bg-slate-700 text-slate-300"
+                                : "bg-white text-slate-700 border border-slate-200"
+                          }`}
+                        >
+                          🎨
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs font-black leading-tight">{opt.label}</p>
+                          </div>
+                          <p className={`text-[10px] font-semibold ${textSub} leading-snug mt-0.5`}>
+                            {opt.desc}
+                          </p>
+                          <span className="inline-block text-[9px] font-extrabold text-purple-500 dark:text-purple-300 mt-1 bg-purple-500/10 px-2 py-0.5 rounded-md">
+                            ✨ Fundo: {opt.patternName}
+                          </span>
+                        </div>
                       </div>
-                      <p className={`text-[10px] font-bold leading-snug mt-0.5 ${textSub}`}>
-                        {opt.desc}
-                      </p>
+
+                      {isSelected && (
+                        <span className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0 shadow">
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </span>
+                      )}
                     </div>
-                    {active && (
-                      <div className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center shrink-0">
-                        <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
+
+                    {/* Color Swatches Palette Preview Pill */}
+                    <div className="mt-3 pt-2.5 border-t border-gray-200/20 flex items-center justify-between">
+                      <span className="text-[10px] font-bold opacity-70">Paleta de cores:</span>
+                      <div className="flex items-center -space-x-1.5 overflow-hidden p-0.5">
+                        {opt.swatches.map((color, idx) => (
+                          <div
+                            key={idx}
+                            className="w-5 h-5 rounded-full border-2 border-white dark:border-slate-900 shadow-sm"
+                            style={{ backgroundColor: color }}
+                            title={color}
+                          />
+                        ))}
                       </div>
-                    )}
+                    </div>
                   </button>
                 );
               })}
@@ -359,108 +452,162 @@ export const SettingsRoute: React.FC = () => {
         </div>
       )}
 
-      {/* ── 3. NOTIFICAÇÕES DESEJADAS ── */}
+      {/* ── 3. NOTIFICAÇÕES REAIS E CONFIGURÁVEIS ── */}
       {shouldShow("notificacoes") && (
-        <div id="section-notificacoes" className="space-y-2">
-          <p className={sectionTitle}>🔔 Notificações Desejadas</p>
-          <div className={`rounded-3xl border-2 p-4 space-y-3 ${cardBg}`}>
-            <p className={`text-[11px] font-bold ${textSub}`}>
-              Escolha quais lembretes você deseja receber ao longo do dia:
-            </p>
-            {[
-              { label: "💧 Lembretes de Água", desc: "Avisar no horário de beber água", key: "notif_water" },
-              { label: "💊 Alertas de Medicamento", desc: "Lembretes pontuais de remédios", key: "notif_meds" },
-              { label: "🎯 Missões Diárias", desc: "Alertas para concluir suas missões", key: "notif_missions" },
-              { label: "🏆 Conquistas do Ranking", desc: "Avisar quando subir de tier ou ultrapassar ranks", key: "notif_ranking" },
-            ].map((item) => {
-              const stored = localStorage.getItem(item.key) !== "false";
-              const [on, setOn] = useState(stored);
-              return (
-                <div key={item.key} className="flex items-center justify-between py-1">
-                  <div>
-                    <p className="text-xs font-black">{item.label}</p>
-                    <p className={`text-[10px] font-bold ${textSub}`}>{item.desc}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = !on;
-                      setOn(next);
-                      localStorage.setItem(item.key, String(next));
-                      toast.success(`${item.label}: ${next ? "Ativado" : "Desativado"}`);
-                    }}
-                    className={`relative w-11 h-6 rounded-full border-2 transition-colors ${
-                      on
-                        ? "bg-purple-600 border-purple-700"
-                        : isDark
-                        ? "bg-slate-600 border-slate-500"
-                        : "bg-slate-200 border-slate-300"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${
-                        on ? "left-[22px]" : "left-0.5"
-                      }`}
-                    />
-                  </button>
+        <div id="section-notificacoes" className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className={sectionTitle}>🔔 Central de Notificações</p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleEnableAllNotifs}
+                className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 hover:underline"
+              >
+                Ativar Todas
+              </button>
+              <span className="text-slate-400 text-xs">•</span>
+              <button
+                type="button"
+                onClick={handleDisableAllNotifs}
+                className="text-[10px] font-black text-rose-500 hover:underline"
+              >
+                Desativar Todas
+              </button>
+            </div>
+          </div>
+
+          <div className={`rounded-3xl border-2 p-4 space-y-4 ${cardBg}`}>
+            {/* Permissões do Navegador */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <Bell className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <p className="text-xs font-black">Notificações Nativas do Navegador</p>
                 </div>
-              );
-            })}
+                <p className={`text-[10px] font-semibold ${textSub}`}>
+                  Receba alertas diretamente no sistema operacional mesmo com a aba fechada.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleRequestBrowserNotifs}
+                className="shrink-0 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs rounded-xl border border-indigo-950 shadow-sm transition-all"
+              >
+                Ativar 🔔
+              </button>
+            </div>
+
+            {/* Lista das 10 Categorias de Notificação */}
+            <div className="divide-y divide-gray-200/20 space-y-3 pt-1">
+              {NOTIFICATION_CONFIG_OPTIONS.map((opt, idx) => {
+                const isEnabled = notifSettings[opt.storageKey] ?? opt.defaultEnabled;
+
+                return (
+                  <div key={opt.id} className={`pt-3 first:pt-0 ${idx > 0 ? "pt-3" : ""}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                        <span className="text-xl shrink-0 mt-0.5">{opt.icon}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-xs font-black truncate">{opt.label}</p>
+                            {!opt.defaultEnabled && (
+                              <span className="text-[9px] font-black px-1.5 py-0.2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full">
+                                Opcional
+                              </span>
+                            )}
+                            {opt.id === "daily_reminder" && (
+                              <span className="text-[9px] font-black px-1.5 py-0.2 bg-emerald-500 text-white rounded-full">
+                                1x ao dia
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-[10px] font-semibold ${textSub} leading-snug mt-0.5`}>
+                            {opt.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      <input
+                        type="checkbox"
+                        checked={isEnabled}
+                        onChange={(e) => handleToggleSetting(opt.storageKey, e.target.checked)}
+                        className="w-4 h-4 accent-purple-600 rounded cursor-pointer shrink-0"
+                      />
+                    </div>
+
+                    {opt.id === "daily_reminder" && isEnabled && (
+                      <div
+                        className={`mt-2 p-2.5 rounded-xl text-[10px] font-semibold leading-relaxed ${
+                          isDark
+                            ? "bg-emerald-900/20 border border-emerald-800/40 text-emerald-300"
+                            : "bg-emerald-50 border border-emerald-200 text-emerald-700"
+                        }`}
+                      >
+                        ✅ Ativado! Seu resumo de saúde será gerado com dados reais no máximo uma vez ao dia, sem repetições contínuas.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Testar Notificação */}
+            <div className="pt-2 border-t border-gray-200/20 space-y-2">
+              <button
+                type="button"
+                onClick={handleTestNotification}
+                className="w-full py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-800 dark:text-white font-black text-xs rounded-xl border border-slate-300 dark:border-slate-600 flex items-center justify-center gap-2 transition-colors active:scale-[0.99]"
+              >
+                <TestTube className="w-4 h-4 text-purple-500" /> Testar Notificação Ativa Agora
+              </button>
+              <p className="text-[10px] font-semibold text-center text-slate-400">
+                Apenas as categorias marcadas com checkbox ativo receberão alertas.
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ── 4. PRIVACIDADE & SEGURANÇA ── */}
+      {/* ── 4. PRIVACIDADE ── */}
       {shouldShow("privacidade") && (
         <div id="section-privacidade" className="space-y-2">
-          <p className={sectionTitle}>🛡️ Privacidade & Segurança</p>
+          <p className={sectionTitle}>🔒 Privacidade & Segurança</p>
           <div className={`rounded-3xl border-2 p-4 space-y-3 ${cardBg}`}>
-            <div className="flex items-center justify-between py-1">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-black">Ocultar Perfil no Ranking público</p>
-                <p className={`text-[10px] font-bold ${textSub}`}>Exibir seu nome como Anônimo</p>
+                <p className="text-xs font-black">Ocultar Perfil do Ranking Público</p>
+                <p className={`text-[10px] font-semibold ${textSub}`}>
+                  Não exibir seu nome publicamente nos líderes
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !hideProfile;
-                  setHideProfile(next);
-                  localStorage.setItem("farmhero_hide_profile", String(next));
+              <input
+                type="checkbox"
+                checked={hideProfile}
+                onChange={(e) => {
+                  setHideProfile(e.target.checked);
+                  localStorage.setItem("farmhero_hide_profile", String(e.target.checked));
+                  toast.success("Privacidade atualizada!");
                 }}
-                className={`relative w-11 h-6 rounded-full border-2 transition-colors ${
-                  hideProfile ? "bg-purple-600 border-purple-700" : isDark ? "bg-slate-600 border-slate-500" : "bg-slate-200 border-slate-300"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${
-                    hideProfile ? "left-[22px]" : "left-0.5"
-                  }`}
-                />
-              </button>
+                className="w-4 h-4 accent-purple-600 rounded cursor-pointer"
+              />
             </div>
-
-            <div className="flex items-center justify-between py-1">
+            <div className="flex items-center justify-between pt-2 border-t border-gray-200/20">
               <div>
-                <p className="text-xs font-black">Coleta Local de Métricas de Saúde</p>
-                <p className={`text-[10px] font-bold ${textSub}`}>Guardar histórico estritamente no dispositivo</p>
+                <p className="text-xs font-black">Telemetria e Melhorias</p>
+                <p className={`text-[10px] font-semibold ${textSub}`}>
+                  Permitir dados de uso anônimos para o FarmHero
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !dataAnalytics;
-                  setDataAnalytics(next);
-                  localStorage.setItem("farmhero_analytics", String(next));
+              <input
+                type="checkbox"
+                checked={dataAnalytics}
+                onChange={(e) => {
+                  setDataAnalytics(e.target.checked);
+                  localStorage.setItem("farmhero_analytics", String(e.target.checked));
+                  toast.success("Preferência de dados atualizada!");
                 }}
-                className={`relative w-11 h-6 rounded-full border-2 transition-colors ${
-                  dataAnalytics ? "bg-purple-600 border-purple-700" : isDark ? "bg-slate-600 border-slate-500" : "bg-slate-200 border-slate-300"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${
-                    dataAnalytics ? "left-[22px]" : "left-0.5"
-                  }`}
-                />
-              </button>
+                className="w-4 h-4 accent-purple-600 rounded cursor-pointer"
+              />
             </div>
           </div>
         </div>
@@ -469,87 +616,84 @@ export const SettingsRoute: React.FC = () => {
       {/* ── 5. HISTÓRICO DE SAÚDE ── */}
       {shouldShow("historico") && (
         <div id="section-historico" className="space-y-2">
-          <p className={sectionTitle}>📜 Histórico de Saúde</p>
-          <div className={`rounded-3xl border-2 p-4 space-y-2.5 ${cardBg}`}>
-            <p className={`text-[11px] font-bold ${textSub}`}>
-              Resumo dos seus registros mais recentes no FarmHero:
+          <p className={sectionTitle}>📜 Histórico Registrado</p>
+          <div className={`rounded-3xl border-2 p-4 space-y-3 ${cardBg}`}>
+            <p className={`text-xs font-bold ${textSub}`}>
+              Resumo dos hábitos e dados salvos neste dispositivo:
             </p>
-            <div className="space-y-2 text-xs font-bold">
-              <div className="flex items-center justify-between p-2.5 bg-cyan-50 dark:bg-slate-700/60 rounded-xl border border-cyan-200 dark:border-slate-600">
-                <span className="flex items-center gap-2">
-                  <Droplets className="w-4 h-4 text-cyan-500" /> Copos de Água Registrados
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2.5 rounded-2xl bg-cyan-50 dark:bg-slate-700 border border-cyan-200 dark:border-slate-600">
+                <span className="text-base font-black text-cyan-700 dark:text-cyan-300">
+                  {waterLogs.length}
                 </span>
-                <span className="font-black text-cyan-600 dark:text-cyan-300">{waterLogs.length} registros</span>
+                <p className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400">
+                  Água
+                </p>
               </div>
-              <div className="flex items-center justify-between p-2.5 bg-pink-50 dark:bg-slate-700/60 rounded-xl border border-pink-200 dark:border-slate-600">
-                <span className="flex items-center gap-2">
-                  <Pill className="w-4 h-4 text-pink-500" /> Medicamentos Cadastrados
+              <div className="p-2.5 rounded-2xl bg-pink-50 dark:bg-slate-700 border border-pink-200 dark:border-slate-600">
+                <span className="text-base font-black text-pink-700 dark:text-pink-300">
+                  {medications.length}
                 </span>
-                <span className="font-black text-pink-600 dark:text-pink-300">{medications.length} remédios</span>
+                <p className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400">
+                  Remédios
+                </p>
               </div>
-              <div className="flex items-center justify-between p-2.5 bg-amber-50 dark:bg-slate-700/60 rounded-xl border border-amber-200 dark:border-slate-600">
-                <span className="flex items-center gap-2">
-                  <Dumbbell className="w-4 h-4 text-amber-500" /> Sessões de Exercício
+              <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-slate-700 border border-amber-200 dark:border-slate-600">
+                <span className="text-base font-black text-amber-700 dark:text-amber-300">
+                  {activities.length}
                 </span>
-                <span className="font-black text-amber-600 dark:text-amber-300">{activities.length} sessões</span>
+                <p className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400">
+                  Treinos
+                </p>
               </div>
             </div>
+            <Link href="/historico">
+              <button
+                type="button"
+                className="w-full py-2 bg-purple-600 text-white font-black text-xs rounded-xl border border-indigo-950 shadow-sm"
+              >
+                Abrir Histórico Completo ➔
+              </button>
+            </Link>
           </div>
         </div>
       )}
 
-      {/* ── 6. DADOS & BACKUP ── */}
+      {/* ── 6. DADOS E BACKUP ── */}
       {shouldShow("dados") && (
         <div id="section-dados" className="space-y-2">
-          <p className={sectionTitle}>💾 Dados & Backup Local</p>
-          <div className={`rounded-3xl border-2 p-1.5 ${cardBg}`}>
-            <button
-              onClick={handleExportData}
-              className="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl hover:bg-emerald-50 dark:hover:bg-slate-700 transition-colors"
-            >
-              <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center shrink-0">
-                <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-xs font-black">Exportar Dados (JSON)</p>
-                <p className={`text-[10px] font-bold ${textSub}`}>Baixar cópia de segurança completa</p>
-              </div>
-              <ChevronRight className={`w-4 h-4 ${textSub}`} />
-            </button>
-
-            <div className={`mx-4 h-px ${isDark ? "bg-slate-700" : "bg-slate-100"}`} />
-
-            <button
-              onClick={handleResetData}
-              className="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl hover:bg-rose-50 dark:hover:bg-slate-700 transition-colors"
-            >
-              <div className="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center shrink-0">
-                <Trash2 className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-xs font-black text-rose-600 dark:text-rose-400">Resetar Progresso</p>
-                <p className={`text-[10px] font-bold ${textSub}`}>Zerar XP, moedas e histórico do app</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-rose-400" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── 7. AJUDA & SOBRE ── */}
-      {shouldShow("sobre") && (
-        <div id="section-sobre" className="space-y-2">
-          <p className={sectionTitle}>ℹ️ Sobre & Informações</p>
-          <div className={`rounded-3xl border-2 p-4 space-y-2 ${cardBg}`}>
+          <p className={sectionTitle}>💾 Gerenciamento de Dados</p>
+          <div className={`rounded-3xl border-2 p-4 space-y-3 ${cardBg}`}>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black">FarmHero App</span>
-              <span className="text-[10px] font-black bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">
-                v1.0.0 Stable
-              </span>
+              <div>
+                <p className="text-xs font-black">Fazer Backup de Dados</p>
+                <p className={`text-[10px] font-semibold ${textSub}`}>
+                  Baixar arquivo JSON com seu progresso
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleExportData}
+                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white font-black text-xs rounded-xl border border-green-800 shadow-sm flex items-center gap-1"
+              >
+                <Download className="w-3.5 h-3.5" /> Baixar
+              </button>
             </div>
-            <p className={`text-[11px] font-bold ${textSub}`}>
-              Plataforma de saúde preventiva gamificada com acompanhamento de hábitos e suporte farmacêutico.
-            </p>
+            <div className="flex items-center justify-between pt-2 border-t border-gray-200/20">
+              <div>
+                <p className="text-xs font-black text-rose-500">Resetar Todo o Progresso</p>
+                <p className={`text-[10px] font-semibold ${textSub}`}>
+                  Apaga todos os dados salvos localmente
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetData}
+                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl border border-rose-800 shadow-sm flex items-center gap-1"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Resetar
+              </button>
+            </div>
           </div>
         </div>
       )}

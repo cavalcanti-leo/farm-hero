@@ -35,7 +35,12 @@ export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) 
 export const DialogHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   className,
   ...props
-}) => <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left mb-4", className)} {...props} />;
+}) => (
+  <div
+    className={cn("flex flex-col space-y-1.5 text-center sm:text-left mb-4", className)}
+    {...props}
+  />
+);
 
 export const DialogTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({
   className,
@@ -52,7 +57,10 @@ export const DialogFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   ...props
 }) => (
   <div
-    className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-6 gap-2", className)}
+    className={cn(
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-6 gap-2",
+      className,
+    )}
     {...props}
   />
 );

@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useAppState } from "@/lib/app-state";
-import { 
-  Droplets, 
-  Plus, 
-  ArrowLeft, 
-  GlassWater, 
-  Clock, 
-  AlertTriangle, 
-  CheckCircle2, 
-  ShieldAlert, 
+import {
+  Droplets,
+  Plus,
+  ArrowLeft,
+  GlassWater,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  ShieldAlert,
   RotateCcw,
   Play,
   Lock,
-  XCircle
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,20 +22,20 @@ import { toast } from "sonner";
 
 // Limites recomendados de saúde (em mL)
 const MIN_HEALTHY_WATER_ML = 2000; // Mínimo diário saudável
-const GOAL_WATER_ML = 2500;        // Meta ideal diária
-const MAX_SAFE_WATER_ML = 4000;    // Limite diário máximo seguro
+const GOAL_WATER_ML = 2500; // Meta ideal diária
+const MAX_SAFE_WATER_ML = 4000; // Limite diário máximo seguro
 
 export const SaudeAguaRoute: React.FC = () => {
-  const { 
-    waterLogs, 
-    addWater, 
+  const {
+    waterLogs,
+    addWater,
     clearWaterLogs,
     waterTimerTargetTimestamp,
     waterTimerIntervalMinutes,
     waterResetDisabledUntil,
     setWaterTimerIntervalMinutes,
     cancelWaterTimer,
-    setWaterTimerTargetTimestamp
+    setWaterTimerTargetTimestamp,
   } = useAppState();
 
   const [customMl, setCustomMl] = useState<number>(250);
@@ -42,7 +43,8 @@ export const SaudeAguaRoute: React.FC = () => {
   const [resetSecondsLeft, setResetSecondsLeft] = useState<number>(0);
 
   // Derive running states based on global timestamps
-  const isTimerRunning = waterTimerTargetTimestamp !== null && waterTimerTargetTimestamp > Date.now();
+  const isTimerRunning =
+    waterTimerTargetTimestamp !== null && waterTimerTargetTimestamp > Date.now();
   const isResetDisabled = waterResetDisabledUntil !== null && waterResetDisabledUntil > Date.now();
 
   const totalWater = waterLogs.reduce((acc, curr) => acc + curr.amountMl, 0);
@@ -51,7 +53,7 @@ export const SaudeAguaRoute: React.FC = () => {
   useEffect(() => {
     const updateCountdowns = () => {
       const now = Date.now();
-      
+
       if (waterTimerTargetTimestamp && waterTimerTargetTimestamp > now) {
         setSecondsLeft(Math.max(0, Math.floor((waterTimerTargetTimestamp - now) / 1000)));
       } else {
@@ -129,18 +131,27 @@ export const SaudeAguaRoute: React.FC = () => {
   };
 
   // Progresso do temporizador em %
-  const timerPercentage = waterTimerIntervalMinutes > 0
-    ? Math.round(((waterTimerIntervalMinutes * 60 - secondsLeft) / (waterTimerIntervalMinutes * 60)) * 100)
-    : 0;
+  const timerPercentage =
+    waterTimerIntervalMinutes > 0
+      ? Math.round(
+          ((waterTimerIntervalMinutes * 60 - secondsLeft) / (waterTimerIntervalMinutes * 60)) * 100,
+        )
+      : 0;
 
   return (
     <div className="p-4 space-y-4 font-sans text-slate-900 animate-in fade-in duration-200">
       {/* Barra Superior */}
       <div className="flex items-center justify-between">
-        <Link href="/saude" className="inline-flex items-center gap-1 text-xs font-black text-purple-700 bg-white border-2 border-indigo-950 px-3 py-1.5 rounded-full shadow-[2px_2px_0px_#1e1b4b]">
+        <Link
+          href="/saude"
+          className="inline-flex items-center gap-1 text-xs font-black text-purple-700 bg-white border-2 border-indigo-950 px-3 py-1.5 rounded-full shadow-[2px_2px_0px_#1e1b4b]"
+        >
           <ArrowLeft className="w-4 h-4 stroke-[3]" /> Voltar para Saúde
         </Link>
-        <span className="text-[10px] font-black text-slate-500 bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-full flex items-center gap-1" title="Reset automático diário às 00:00 meia-noite">
+        <span
+          className="text-[10px] font-black text-slate-500 bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-full flex items-center gap-1"
+          title="Reset automático diário às 00:00 meia-noite"
+        >
           🔄 Auto resete às 00:00
         </span>
       </div>
@@ -154,7 +165,9 @@ export const SaudeAguaRoute: React.FC = () => {
             </div>
             <div>
               <h1 className="text-base font-black text-indigo-950">Hidratação Diária</h1>
-              <p className="text-xs text-slate-500 font-bold">Mínimo: 2.000 ml | Máximo seguro: 4.000 ml</p>
+              <p className="text-xs text-slate-500 font-bold">
+                Mínimo: 2.000 ml | Máximo seguro: 4.000 ml
+              </p>
             </div>
           </div>
 
@@ -167,9 +180,13 @@ export const SaudeAguaRoute: React.FC = () => {
                 ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed shadow-none"
                 : "bg-red-100 hover:bg-red-200 text-red-700 active:translate-y-0.5"
             }`}
-            title={isResetDisabled ? `Reset bloqueado. Aguarde ${formatResetTime(resetSecondsLeft)}` : "Zerar o total de água consumido hoje"}
+            title={
+              isResetDisabled
+                ? `Reset bloqueado. Aguarde ${formatResetTime(resetSecondsLeft)}`
+                : "Zerar o total de água consumido hoje"
+            }
           >
-            <RotateCcw className="w-3.5 h-3.5" /> 
+            <RotateCcw className="w-3.5 h-3.5" />
             {isResetDisabled ? `Aguarde (${formatResetTime(resetSecondsLeft)})` : "Zerar (0 ml)"}
           </button>
         </div>
@@ -185,18 +202,21 @@ export const SaudeAguaRoute: React.FC = () => {
           {/* Barra de Progresso com Indicador de Limites */}
           <div className="w-full space-y-1">
             <div className="w-full h-4 bg-slate-200 rounded-full border-2 border-indigo-950 overflow-hidden relative">
-              <div 
+              <div
                 className={`h-full transition-all duration-500 ${
-                  totalWater >= MAX_SAFE_WATER_ML 
-                    ? "bg-red-500" 
-                    : totalWater >= MIN_HEALTHY_WATER_ML 
-                      ? "bg-emerald-500" 
+                  totalWater >= MAX_SAFE_WATER_ML
+                    ? "bg-red-500"
+                    : totalWater >= MIN_HEALTHY_WATER_ML
+                      ? "bg-emerald-500"
                       : "bg-cyan-500"
                 }`}
                 style={{ width: `${Math.min(100, (totalWater / MAX_SAFE_WATER_ML) * 100)}%` }}
               />
               {/* Linha indicadora do Mínimo Saudável (50% de 4.000ml = 2.000ml) */}
-              <div className="absolute top-0 bottom-0 left-[50%] w-0.5 bg-indigo-950 border-r border-white" title="Mínimo Saudável (2.000ml)" />
+              <div
+                className="absolute top-0 bottom-0 left-[50%] w-0.5 bg-indigo-950 border-r border-white"
+                title="Mínimo Saudável (2.000ml)"
+              />
             </div>
 
             <div className="flex justify-between text-[10px] font-black text-slate-500 px-1">
@@ -210,7 +230,10 @@ export const SaudeAguaRoute: React.FC = () => {
           {totalWater < MIN_HEALTHY_WATER_ML ? (
             <div className="w-full bg-amber-100 border-2 border-indigo-950 p-2.5 rounded-2xl flex items-center gap-2 text-xs text-amber-900 font-bold">
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Abaixo do mínimo saudável! Faltam {MIN_HEALTHY_WATER_ML - totalWater}ml para atingir 2.000ml.</span>
+              <span>
+                Abaixo do mínimo saudável! Faltam {MIN_HEALTHY_WATER_ML - totalWater}ml para atingir
+                2.000ml.
+              </span>
             </div>
           ) : totalWater <= 3500 ? (
             <div className="w-full bg-emerald-100 border-2 border-indigo-950 p-2.5 rounded-2xl flex items-center gap-2 text-xs text-emerald-900 font-bold">
@@ -220,7 +243,10 @@ export const SaudeAguaRoute: React.FC = () => {
           ) : (
             <div className="w-full bg-red-100 border-2 border-indigo-950 p-2.5 rounded-2xl flex items-center gap-2 text-xs text-red-900 font-bold">
               <ShieldAlert className="w-4 h-4 text-red-600 shrink-0" />
-              <span>Atenção: Você atingiu a faixa de limite máximo diário. Evite consumir água em excesso.</span>
+              <span>
+                Atenção: Você atingiu a faixa de limite máximo diário. Evite consumir água em
+                excesso.
+              </span>
             </div>
           )}
         </div>
@@ -230,10 +256,12 @@ export const SaudeAguaRoute: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-purple-700 stroke-[2.5]" />
-              <h3 className="text-xs font-black text-indigo-950 uppercase tracking-wider">Temporizador da Hidratação</h3>
+              <h3 className="text-xs font-black text-indigo-950 uppercase tracking-wider">
+                Temporizador da Hidratação
+              </h3>
             </div>
             {isTimerRunning && (
-              <button 
+              <button
                 onClick={handleCancelTimer}
                 className="flex items-center gap-1 text-[10px] font-black text-red-700 bg-red-100 border border-red-400 px-2 py-0.5 rounded-lg hover:bg-red-200 transition-all"
                 title="Cancelar Temporizador Atual"
@@ -248,20 +276,23 @@ export const SaudeAguaRoute: React.FC = () => {
             <div className="bg-white border-2 border-indigo-950 rounded-2xl p-3.5 flex flex-col items-center justify-center space-y-2">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                <span className="text-3xl font-black font-mono text-purple-800 tracking-widest">{formatTime(secondsLeft)}</span>
+                <span className="text-3xl font-black font-mono text-purple-800 tracking-widest">
+                  {formatTime(secondsLeft)}
+                </span>
               </div>
               <div className="text-center space-y-0.5">
                 <p className="text-xs font-extrabold text-purple-900">
                   Próxima hidratação liberada em
                 </p>
                 <p className="text-[10px] font-bold text-slate-500">
-                  Os botões estão bloqueados temporariamente para incentivar um ritmo saudável de hidratação.
+                  Os botões estão bloqueados temporariamente para incentivar um ritmo saudável de
+                  hidratação.
                 </p>
               </div>
-              
+
               {/* Barra do Temporizador */}
               <div className="w-full h-2.5 bg-slate-100 rounded-full border border-indigo-950 overflow-hidden mt-1">
-                <div 
+                <div
                   className="h-full bg-purple-600 transition-all duration-1000"
                   style={{ width: `${timerPercentage}%` }}
                 />
@@ -274,7 +305,8 @@ export const SaudeAguaRoute: React.FC = () => {
                 <span>Pronto para iniciar</span>
               </div>
               <p className="text-[11px] font-bold text-slate-500">
-                Clique em um dos botões abaixo para registrar o consumo e dar partida no temporizador!
+                Clique em um dos botões abaixo para registrar o consumo e dar partida no
+                temporizador!
               </p>
             </div>
           )}
@@ -291,8 +323,8 @@ export const SaudeAguaRoute: React.FC = () => {
                   className={`px-2 py-1 text-[10px] font-black rounded-lg border border-indigo-950 transition-all ${
                     isTimerRunning
                       ? "bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed"
-                      : waterTimerIntervalMinutes === mins 
-                        ? "bg-purple-700 text-white shadow-[1px_1px_0px_#1e1b4b]" 
+                      : waterTimerIntervalMinutes === mins
+                        ? "bg-purple-700 text-white shadow-[1px_1px_0px_#1e1b4b]"
                         : "bg-white text-indigo-950 hover:bg-purple-100"
                   }`}
                 >
@@ -328,11 +360,19 @@ export const SaudeAguaRoute: React.FC = () => {
                     : "bg-cyan-50 hover:bg-cyan-100 border-indigo-950 text-cyan-900 shadow-[2px_2px_0px_#1e1b4b] active:translate-y-0.5 cursor-pointer"
                 }`}
               >
-                <span className={`text-sm font-black block ${isTimerRunning ? "text-slate-400" : "text-cyan-900"}`}>
+                <span
+                  className={`text-sm font-black block ${isTimerRunning ? "text-slate-400" : "text-cyan-900"}`}
+                >
                   +{amount} ml
                 </span>
                 <span className="text-[10px] font-extrabold text-slate-400 block">
-                  {amount === 150 ? "Copo pequeno" : amount === 250 ? "Copo padrão" : amount === 350 ? "Caneca" : "Garrafinha"}
+                  {amount === 150
+                    ? "Copo pequeno"
+                    : amount === 250
+                      ? "Copo padrão"
+                      : amount === 350
+                        ? "Caneca"
+                        : "Garrafinha"}
                 </span>
               </button>
             ))}
@@ -354,9 +394,9 @@ export const SaudeAguaRoute: React.FC = () => {
                 : "bg-white border-indigo-950 text-indigo-950 placeholder:text-slate-400"
             }`}
           />
-          <Button 
-            type="submit" 
-            variant="emerald" 
+          <Button
+            type="submit"
+            variant="emerald"
             disabled={isTimerRunning}
             className={`border-3 font-black text-xs ${
               isTimerRunning
@@ -371,12 +411,17 @@ export const SaudeAguaRoute: React.FC = () => {
 
       {/* Histórico do Dia */}
       <div className="bg-white border-4 border-indigo-950 rounded-3xl p-4 shadow-[4px_4px_0px_#1e1b4b] space-y-3">
-        <h3 className="text-xs font-black text-indigo-950 uppercase tracking-wider">Histórico de Hoje:</h3>
+        <h3 className="text-xs font-black text-indigo-950 uppercase tracking-wider">
+          Histórico de Hoje:
+        </h3>
         {waterLogs.length === 0 ? (
           <p className="text-xs text-slate-400 font-bold">Nenhum registro finalizado ainda hoje.</p>
         ) : (
           waterLogs.map((log) => (
-            <div key={log.id} className="flex items-center justify-between p-2.5 bg-slate-50 border-2 border-indigo-950 rounded-2xl text-xs font-black">
+            <div
+              key={log.id}
+              className="flex items-center justify-between p-2.5 bg-slate-50 border-2 border-indigo-950 rounded-2xl text-xs font-black"
+            >
               <span className="text-cyan-700">+{log.amountMl} ml</span>
               <span className="text-slate-400 font-mono">{log.time}</span>
             </div>
