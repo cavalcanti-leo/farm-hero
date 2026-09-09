@@ -1,7 +1,9 @@
-import React, { useState, useRef } from "react";
+import React from "react";
+import { useState, useRef } from "react";
 import { Link } from "wouter";
 import { useTheme, AppTheme } from "@/lib/theme-context";
 import { useAppState } from "@/lib/app-state";
+import { useAuth } from "@/lib/auth-context";
 import {
   MoreHorizontal,
   User,
@@ -24,56 +26,123 @@ import {
   Pill,
   Dumbbell,
   X,
+  Share2,
+  Copy,
 } from "lucide-react";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
-const THEME_OPTIONS: { id: AppTheme; label: string; desc: string; icon: React.ReactNode; preview: string }[] = [
-  {
-    id: "classic",
-    label: "Clássico",
-    desc: "Estilo vibrante FarmHero com ciano, roxo e neo-brutalismo 3D.",
-    icon: <Palette className="w-5 h-5" />,
-    preview: "from-cyan-300 via-purple-300 to-indigo-400",
-  },
-  {
-    id: "light",
-    label: "Claro",
-    desc: "Fundo branco e cores suaves para uso diurno limpo e agradável.",
-    icon: <Sun className="w-5 h-5" />,
-    preview: "from-white via-slate-100 to-purple-100",
-  },
-  {
-    id: "dark",
-    label: "Escuro",
-    desc: "Modo noturno elegante em tons escuros para descansar a vista.",
-    icon: <Moon className="w-5 h-5" />,
-    preview: "from-slate-900 via-indigo-950 to-slate-800",
-  },
-];
+import { THEMES_LIST } from "@/lib/themes";
+
+const ToggleSettingItem: React.FC<{ label: string; desc: string; storageKey: string }> = ({
+  label,
+  desc,
+  storageKey,
+}) => {
+  const [on, setOn] = useState(() => localStorage.getItem(storageKey) !== "false");
+  return (
+    <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+      <div>
+        <p className="text-xs font-black">{label}</p>
+        <p className="text-[10px] font-bold text-slate-500">{desc}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          const next = !on;
+          setOn(next);
+          localStorage.setItem(storageKey, String(next));
+        }}
+        className={`relative w-11 h-6 rounded-full border-2 transition-colors ${
+          on ? "bg-purple-600 border-purple-700" : "bg-slate-300 border-slate-400"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${
+            on ? "left-[22px]" : "left-0.5"
+          }`}
+        />
+      </button>
+    </div>
+  );
+};
 
 export const MaisRoute: React.FC = () => {
-  const { theme, setTheme, isDark, isLight } = useTheme();
+  const {
+    theme,
+    setTheme,
+    isDark,
+    isLight,
+    pageBgClass,
+    cardBgClass,
+    cardBorderClass,
+    textPrimaryClass,
+    textSecondaryClass,
+    bgStyle,
+  } = useTheme();
   const { waterLogs, medications, activities } = useAppState();
 
   // Modals state
   const [activeModal, setActiveModal] = useState<string | null>(null);
 
-  // Profile local state
-  const [name, setName] = useState(() => localStorage.getItem("farmhero_name") || "");
-  const [bio, setBio] = useState(() => localStorage.getItem("farmhero_bio") || "");
-  const [email, setEmail] = useState(() => localStorage.getItem("farmhero_email") || "usuario@farmhero.app");
+  // Auth
+  const { currentUser, logout } = useAuth();
+
+  // Share / Link Público state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [codigoConvite, setCodigoConvite] = useState("farmhero-publico");
+
+  const getPublicLink = () => {
+    const base = window.location.origin;
+    return `${base}/?convite=${codigoConvite}`;
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(getPublicLink());
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    } catch {
+      const el = document.createElement("textarea");
+      el.value = getPublicLink();
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    }
+  };
+
+  const handleShareWhatsApp = () => {
+    const msg = encodeURIComponent(
+      `🦸 Entre no FarmHero comigo! Cuide da sua saúde de forma divertida e ganhe recompensas.\n\nAcesse agora: ${getPublicLink()}`,
+    );
+    window.open(`https://wa.me/?text=${msg}`, "_blank");
+  };
+
+  // Profile local state — pre-fill from auth context
+  const [name, setName] = useState(
+    () => currentUser?.nome || localStorage.getItem("farmhero_name") || "",
+  );
+  const [bio, setBio] = useState(
+    () => localStorage.getItem(`farmhero_bio_${currentUser?.id}`) || "",
+  );
+  const [email, setEmail] = useState(
+    () => currentUser?.email || localStorage.getItem("farmhero_email") || "",
+  );
   const [avatarPreview, setAvatarPreview] = useState<string | null>(
-    () => localStorage.getItem("farmhero_avatar_url") || null
+    () => localStorage.getItem(`farmhero_avatar_url_${currentUser?.id}`) || null,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Privacy states
   const [hideProfile, setHideProfile] = useState(
-    () => localStorage.getItem("farmhero_hide_profile") === "true"
+    () => localStorage.getItem("farmhero_hide_profile") === "true",
   );
   const [dataAnalytics, setDataAnalytics] = useState(
-    () => localStorage.getItem("farmhero_analytics") !== "false"
+    () => localStorage.getItem("farmhero_analytics") !== "false",
   );
 
   const handleSaveProfile = () => {
@@ -121,19 +190,9 @@ export const MaisRoute: React.FC = () => {
     }
   };
 
-  const pageBg = isDark
-    ? "bg-slate-900 text-white"
-    : isLight
-    ? "bg-slate-50 text-slate-900"
-    : "bg-gradient-to-b from-cyan-100 to-purple-50 text-slate-900";
-
-  const cardBg = isDark
-    ? "bg-slate-800 border-slate-700 text-white hover:border-slate-500 shadow-[3px_3px_0px_#0f172a]"
-    : isLight
-    ? "bg-white border-slate-200 text-slate-900 hover:border-purple-300 shadow-md"
-    : "bg-white border-indigo-950 text-slate-900 hover:border-purple-600 shadow-[3px_3px_0px_#1e1b4b]";
-
-  const textSub = isDark ? "text-slate-400" : isLight ? "text-slate-500" : "text-slate-500";
+  const pageBg = `${pageBgClass}`;
+  const cardBg = `${cardBgClass} ${cardBorderClass} hover:opacity-90`;
+  const textSub = textSecondaryClass;
 
   const settingsButtons = [
     {
@@ -195,7 +254,7 @@ export const MaisRoute: React.FC = () => {
   ];
 
   return (
-    <div className={`p-4 space-y-5 animate-in fade-in duration-200 min-h-full ${pageBg}`}>
+    <div className={`p-4 space-y-5 animate-in fade-in duration-200 min-h-full ${pageBg}`} style={bgStyle}>
       {/* Header */}
       <div className="flex items-center justify-between pt-1">
         <div>
@@ -207,6 +266,55 @@ export const MaisRoute: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Card do usuário logado */}
+      {currentUser && (
+        <div
+          className={`rounded-3xl border-4 border-indigo-950 p-4 shadow-[4px_4px_0px_#1e1b4b] ${
+            currentUser.isDev
+              ? "bg-gradient-to-r from-slate-800 to-slate-700"
+              : currentUser.role === "farmaceutico"
+                ? "bg-gradient-to-r from-emerald-600 to-teal-600"
+                : "bg-gradient-to-r from-purple-600 to-indigo-600"
+          } text-white`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 border-2 border-white/30 flex items-center justify-center text-2xl shrink-0">
+              {currentUser.isDev ? "⚙️" : currentUser.role === "farmaceutico" ? "🧑‍⚕️" : "🦸"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-base leading-tight">
+                  {currentUser.nome} {currentUser.sobrenome}
+                </span>
+                {currentUser.isDev && (
+                  <span className="text-[10px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-full">
+                    ⚙️ DEV
+                  </span>
+                )}
+                {currentUser.role === "farmaceutico" && !currentUser.isDev && (
+                  <span className="text-[10px] font-black bg-white/20 text-white px-2 py-0.5 rounded-full">
+                    🧑‍⚕️ Farmacêutico
+                  </span>
+                )}
+              </div>
+              {currentUser.cpf && (
+                <p className="text-[11px] font-bold text-white/70 mt-0.5">CPF: {currentUser.cpf}</p>
+              )}
+              {currentUser.email && (
+                <p className="text-[11px] font-bold text-white/70 truncate">{currentUser.email}</p>
+              )}
+            </div>
+            <button
+              onClick={logout}
+              className="shrink-0 w-9 h-9 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-white hover:bg-white/30 active:scale-95 transition-all"
+              title="Sair"
+            >
+              <span className="text-sm">🚪</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Hero Banner — Mudar Tema Instantâneo */}
       <div
@@ -228,6 +336,7 @@ export const MaisRoute: React.FC = () => {
         <ChevronRight className="w-6 h-6 stroke-[3] shrink-0" />
       </div>
 
+
       {/* Grid de Botões Únicos e Separados de Configuração */}
       <div className="space-y-2.5">
         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
@@ -242,7 +351,9 @@ export const MaisRoute: React.FC = () => {
             className={`w-full flex items-center justify-between p-3.5 rounded-3xl border-3 transition-all text-left active:scale-[.98] cursor-pointer ${cardBg}`}
           >
             <div className="flex items-center gap-3.5">
-              <div className={`w-11 h-11 rounded-2xl border-2 border-indigo-950/20 flex items-center justify-center ${btn.bgIcon} shrink-0`}>
+              <div
+                className={`w-11 h-11 rounded-2xl border-2 border-indigo-950/20 flex items-center justify-center ${btn.bgIcon} shrink-0`}
+              >
                 {btn.icon}
               </div>
               <div>
@@ -282,8 +393,8 @@ export const MaisRoute: React.FC = () => {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 my-4">
-          {THEME_OPTIONS.map((opt) => {
+        <div className="space-y-3 my-4 max-h-[60vh] overflow-y-auto pr-1">
+          {THEMES_LIST.map((opt) => {
             const active = theme === opt.id;
             return (
               <button
@@ -293,35 +404,45 @@ export const MaisRoute: React.FC = () => {
                   setTheme(opt.id);
                   toast.success(`🎨 Tema alterado para ${opt.label}!`);
                 }}
-                className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border-2 text-left transition-all active:scale-[.98] ${
+                className={`w-full flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition-all active:scale-[.98] ${
                   active
-                    ? "border-purple-500 bg-purple-50 dark:bg-purple-950/50 shadow-[2px_2px_0px_#7c3aed]"
+                    ? "border-purple-500 bg-purple-50 dark:bg-purple-950/50 shadow-md ring-2 ring-purple-500/40"
                     : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-purple-300"
                 }`}
               >
-                <div
-                  className={`w-12 h-10 rounded-xl bg-gradient-to-br ${opt.preview} border-2 ${
-                    active ? "border-purple-500" : "border-slate-300"
-                  } shrink-0`}
-                />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className={active ? "text-purple-600 font-bold" : "text-slate-800 dark:text-white"}>
-                      {opt.icon}
-                    </span>
-                    <span className={`text-sm font-black ${active ? "text-purple-600 dark:text-purple-300" : "text-slate-800 dark:text-white"}`}>
-                      {opt.label}
-                    </span>
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-base">🎨</span>
+                      <span className={`text-xs font-black ${active ? "text-purple-600 dark:text-purple-300" : "text-slate-800 dark:text-white"}`}>
+                        {opt.label}
+                      </span>
+                    </div>
+
+                    {active && (
+                      <div className="w-5 h-5 rounded-full bg-purple-600 flex items-center justify-center shrink-0">
+                        <Check className="w-3 h-3 text-white stroke-[3]" />
+                      </div>
+                    )}
                   </div>
+                  
                   <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
                     {opt.desc}
                   </p>
-                </div>
-                {active && (
-                  <div className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
+
+                  <div className="mt-2 flex items-center justify-between pt-1.5 border-t border-slate-200/50 dark:border-slate-700/50">
+                    <span className="text-[9px] font-extrabold text-purple-400">✨ {opt.patternName}</span>
+                    <div className="flex items-center -space-x-1">
+                      {opt.swatches.map((c, i) => (
+                        <div
+                          key={i}
+                          className="w-4 h-4 rounded-full border border-white dark:border-slate-800 shadow-sm"
+                          style={{ backgroundColor: c }}
+                        />
+                      ))}
+                    </div>
                   </div>
-                )}
+                </div>
               </button>
             );
           })}
@@ -329,7 +450,10 @@ export const MaisRoute: React.FC = () => {
       </Dialog>
 
       {/* ===================== MODAL DE PERFIL ===================== */}
-      <Dialog open={activeModal === "perfil"} onOpenChange={(open) => !open && setActiveModal(null)}>
+      <Dialog
+        open={activeModal === "perfil"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+      >
         <DialogHeader>
           <DialogTitle className="text-xl font-black text-indigo-950 dark:text-white flex items-center gap-2">
             <User className="w-6 h-6 text-purple-600" /> Meu Perfil
@@ -351,11 +475,19 @@ export const MaisRoute: React.FC = () => {
               >
                 <Camera className="w-3.5 h-3.5 text-white" />
               </button>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
             </div>
             <div>
               <p className="text-xs font-black">Alterar Foto</p>
-              <p className="text-[10px] font-bold text-slate-500">Toque na câmera para carregar imagem</p>
+              <p className="text-[10px] font-bold text-slate-500">
+                Toque na câmera para carregar imagem
+              </p>
             </div>
           </div>
 
@@ -391,7 +523,10 @@ export const MaisRoute: React.FC = () => {
       </Dialog>
 
       {/* ===================== MODAL DE NOTIFICAÇÕES ===================== */}
-      <Dialog open={activeModal === "notificacoes"} onOpenChange={(open) => !open && setActiveModal(null)}>
+      <Dialog
+        open={activeModal === "notificacoes"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+      >
         <DialogHeader>
           <DialogTitle className="text-xl font-black text-indigo-950 dark:text-white flex items-center gap-2">
             <Bell className="w-6 h-6 text-rose-500" /> Notificações Desejadas
@@ -399,39 +534,37 @@ export const MaisRoute: React.FC = () => {
         </DialogHeader>
         <div className="space-y-3 my-4">
           {[
-            { label: "💧 Lembretes de Água", desc: "Avisar horário de beber água", key: "notif_water" },
-            { label: "💊 Alertas de Remédio", desc: "Avisar hora dos medicamentos", key: "notif_meds" },
-            { label: "🎯 Missões Diárias", desc: "Lembrar missões pendentes", key: "notif_missions" },
-          ].map((item) => {
-            const stored = localStorage.getItem(item.key) !== "false";
-            const [on, setOn] = useState(stored);
-            return (
-              <div key={item.key} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                <div>
-                  <p className="text-xs font-black">{item.label}</p>
-                  <p className="text-[10px] font-bold text-slate-500">{item.desc}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = !on;
-                    setOn(next);
-                    localStorage.setItem(item.key, String(next));
-                  }}
-                  className={`relative w-11 h-6 rounded-full border-2 transition-colors ${
-                    on ? "bg-purple-600 border-purple-700" : "bg-slate-300 border-slate-400"
-                  }`}
-                >
-                  <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${on ? "left-[22px]" : "left-0.5"}`} />
-                </button>
-              </div>
-            );
-          })}
+            {
+              label: "💧 Lembretes de Água",
+              desc: "Avisar horário de beber água",
+              key: "notif_water",
+            },
+            {
+              label: "💊 Alertas de Remédio",
+              desc: "Avisar hora dos medicamentos",
+              key: "notif_meds",
+            },
+            {
+              label: "🎯 Missões Diárias",
+              desc: "Lembrar missões pendentes",
+              key: "notif_missions",
+            },
+          ].map((item) => (
+            <ToggleSettingItem
+              key={item.key}
+              label={item.label}
+              desc={item.desc}
+              storageKey={item.key}
+            />
+          ))}
         </div>
       </Dialog>
 
       {/* ===================== MODAL DE PRIVACIDADE ===================== */}
-      <Dialog open={activeModal === "privacidade"} onOpenChange={(open) => !open && setActiveModal(null)}>
+      <Dialog
+        open={activeModal === "privacidade"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+      >
         <DialogHeader>
           <DialogTitle className="text-xl font-black text-indigo-950 dark:text-white flex items-center gap-2">
             <ShieldCheck className="w-6 h-6 text-emerald-500" /> Privacidade & Segurança
@@ -455,14 +588,19 @@ export const MaisRoute: React.FC = () => {
               }}
               className={`relative w-11 h-6 rounded-full border-2 transition-colors ${hideProfile ? "bg-purple-600 border-purple-700" : "bg-slate-300"}`}
             >
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${hideProfile ? "left-[22px]" : "left-0.5"}`} />
+              <span
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${hideProfile ? "left-[22px]" : "left-0.5"}`}
+              />
             </button>
           </div>
         </div>
       </Dialog>
 
       {/* ===================== MODAL DE HISTÓRICO ===================== */}
-      <Dialog open={activeModal === "historico"} onOpenChange={(open) => !open && setActiveModal(null)}>
+      <Dialog
+        open={activeModal === "historico"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+      >
         <DialogHeader>
           <DialogTitle className="text-xl font-black text-indigo-950 dark:text-white flex items-center gap-2">
             <History className="w-6 h-6 text-cyan-500" /> Histórico de Registros
@@ -519,6 +657,110 @@ export const MaisRoute: React.FC = () => {
           <p>Desenvolvido com React 18, TypeScript e Tailwind CSS.</p>
         </div>
       </Dialog>
+
+      {/* ===================== MODAL LINK PÚBLICO ===================== */}
+      {showShareModal && (
+        <div
+          className="fixed inset-0 z-[999] flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.75)" }}
+          onClick={(e) => e.target === e.currentTarget && setShowShareModal(false)}
+        >
+          <div className="w-full max-w-sm bg-white rounded-3xl border-4 border-indigo-950 shadow-[6px_6px_0px_#1e1b4b] overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-white">
+                <Share2 className="w-5 h-5" />
+                <span className="font-black text-sm uppercase tracking-wider">
+                  Compartilhar Link Público
+                </span>
+              </div>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/40 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div className="bg-emerald-50 rounded-2xl border-2 border-emerald-200 p-3">
+                <p className="text-xs font-black text-emerald-900">🔗 Como funciona?</p>
+                <p className="text-[11px] font-bold text-emerald-700 mt-1 leading-snug">
+                  Qualquer pessoa que acessar o link abaixo entrará diretamente no FarmHero sem
+                  precisar criar conta!
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-black text-indigo-950 block">
+                  Código do Convite (personalize)
+                </label>
+                <div className="flex gap-2">
+                  <span className="flex items-center px-3 bg-slate-100 border-2 border-r-0 border-indigo-950 rounded-l-xl text-xs font-black text-slate-500 shrink-0">
+                    ?convite=
+                  </span>
+                  <input
+                    type="text"
+                    value={codigoConvite}
+                    onChange={(e) =>
+                      setCodigoConvite(
+                        e.target.value
+                          .toLowerCase()
+                          .replace(/\s/g, "-")
+                          .replace(/[^a-z0-9-]/g, ""),
+                      )
+                    }
+                    className="flex-1 border-2 border-indigo-950 rounded-r-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    maxLength={30}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-black text-indigo-950 block">
+                  Link Público Gerado
+                </label>
+                <div className="bg-slate-50 border-2 border-indigo-950 rounded-xl px-3 py-2.5">
+                  <p className="text-[10px] font-bold text-slate-600 break-all leading-snug">
+                    {getPublicLink()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <button
+                  onClick={handleCopyLink}
+                  className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-indigo-950 font-black text-sm shadow-[3px_3px_0px_#1e1b4b] hover:shadow-[1px_1px_0px_#1e1b4b] hover:translate-x-0.5 hover:translate-y-0.5 transition-all ${
+                    linkCopied
+                      ? "bg-emerald-500 text-white"
+                      : "bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
+                  }`}
+                >
+                  {linkCopied ? (
+                    <>
+                      <Check className="w-4 h-4 stroke-[3]" /> Link Copiado!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 stroke-[2.5]" /> Copiar Link Público
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleShareWhatsApp}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-[#25D366] rounded-2xl border-2 border-indigo-950 font-black text-sm text-white shadow-[3px_3px_0px_#1e1b4b] hover:shadow-[1px_1px_0px_#1e1b4b] hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
+                >
+                  <span className="text-base">📲</span> Compartilhar no WhatsApp
+                </button>
+              </div>
+
+              <p className="text-center text-[10px] font-bold text-slate-400">
+                🔒 Nenhum cadastro necessário — acesso público e seguro
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

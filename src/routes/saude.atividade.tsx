@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { useAppState } from "@/lib/app-state";
 import { Dumbbell, Plus, ArrowLeft } from "lucide-react";
@@ -22,7 +23,10 @@ export const SaudeAtividadeRoute: React.FC = () => {
 
   return (
     <div className="p-4 space-y-4 font-sans text-slate-900 animate-in fade-in duration-200">
-      <Link href="/saude" className="inline-flex items-center gap-1 text-xs font-black text-purple-700 bg-white border-2 border-indigo-950 px-3 py-1.5 rounded-full shadow-[2px_2px_0px_#1e1b4b]">
+      <Link
+        href="/saude"
+        className="inline-flex items-center gap-1 text-xs font-black text-purple-700 bg-white border-2 border-indigo-950 px-3 py-1.5 rounded-full shadow-[2px_2px_0px_#1e1b4b]"
+      >
         <ArrowLeft className="w-4 h-4 stroke-[3]" /> Voltar para Saúde
       </Link>
 
@@ -37,8 +41,13 @@ export const SaudeAtividadeRoute: React.FC = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3 bg-amber-50 p-4 rounded-2xl border-3 border-indigo-950">
-          <h3 className="text-xs font-black text-indigo-950 uppercase tracking-wider">Novo Treino:</h3>
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-3 bg-amber-50 p-4 rounded-2xl border-3 border-indigo-950"
+        >
+          <h3 className="text-xs font-black text-indigo-950 uppercase tracking-wider">
+            Novo Treino:
+          </h3>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -62,18 +71,29 @@ export const SaudeAtividadeRoute: React.FC = () => {
               className="border-2 border-indigo-950 text-xs font-bold bg-black text-indigo-950 placeholder:text-slate-400"
             />
           </div>
-          <Button type="submit" variant="amber" className="w-full border-3 border-indigo-950 font-black text-xs">
+          <Button
+            type="submit"
+            variant="amber"
+            className="w-full border-3 border-indigo-950 font-black text-xs"
+          >
             <Plus className="w-4 h-4 mr-1 stroke-[3]" /> Concluir Treino (+50 XP)
           </Button>
         </form>
 
         <div className="space-y-2">
-          <h3 className="text-xs font-black text-indigo-950 uppercase tracking-wider">Treinos de Hoje:</h3>
+          <h3 className="text-xs font-black text-indigo-950 uppercase tracking-wider">
+            Treinos de Hoje:
+          </h3>
           {activities.map((a) => (
-            <div key={a.id} className="p-3 bg-slate-50 border-2 border-indigo-950 rounded-2xl flex justify-between items-center text-xs font-black">
+            <div
+              key={a.id}
+              className="p-3 bg-slate-50 border-2 border-indigo-950 rounded-2xl flex justify-between items-center text-xs font-black"
+            >
               <div>
                 <p className="text-indigo-950">{a.title}</p>
-                <p className="text-[10px] text-slate-400">{a.durationMinutes} min • {a.time}</p>
+                <p className="text-[10px] text-slate-400">
+                  {a.durationMinutes} min • {a.time}
+                </p>
               </div>
               <span className="text-amber-600 font-extrabold">-{a.caloriesBurned} kcal</span>
             </div>

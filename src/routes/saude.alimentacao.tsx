@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { useAppState, MealEntry } from "@/lib/app-state";
 import { Utensils, Plus, ArrowLeft, Apple } from "lucide-react";
@@ -24,7 +25,10 @@ export const SaudeAlimentacaoRoute: React.FC = () => {
 
   return (
     <div className="p-4 space-y-4 font-sans text-slate-900 animate-in fade-in duration-200">
-      <Link href="/saude" className="inline-flex items-center gap-1 text-xs font-black text-purple-700 bg-white border-2 border-indigo-950 px-3 py-1.5 rounded-full shadow-[2px_2px_0px_#1e1b4b] active:translate-y-0.5 transition-all">
+      <Link
+        href="/saude"
+        className="inline-flex items-center gap-1 text-xs font-black text-purple-700 bg-white border-2 border-indigo-950 px-3 py-1.5 rounded-full shadow-[2px_2px_0px_#1e1b4b] active:translate-y-0.5 transition-all"
+      >
         <ArrowLeft className="w-4 h-4 stroke-[3]" /> Voltar para Saúde
       </Link>
 
@@ -39,8 +43,13 @@ export const SaudeAlimentacaoRoute: React.FC = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3 bg-emerald-50 p-4 rounded-2xl border-3 border-indigo-950">
-          <h3 className="text-xs font-black text-indigo-950 uppercase tracking-wider">Nova Refeição:</h3>
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-3 bg-emerald-50 p-4 rounded-2xl border-3 border-indigo-950"
+        >
+          <h3 className="text-xs font-black text-indigo-950 uppercase tracking-wider">
+            Nova Refeição:
+          </h3>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -51,13 +60,21 @@ export const SaudeAlimentacaoRoute: React.FC = () => {
           <div className="grid grid-cols-2 gap-2">
             <Select
               value={type}
-              onChange={(e) => setType(e.target.value as any)}
+              onChange={(e) => setType(e.target.value as "café" | "almoço" | "jantar" | "lanche")}
               className="border-2 border-indigo-950 text-xs font-bold bg-white text-indigo-950 [&>option]:bg-white [&>option]:text-indigo-950"
             >
-              <option value="café" className="bg-white text-indigo-950 font-bold">Café da Manhã</option>
-              <option value="almoço" className="bg-white text-indigo-950 font-bold">Almoço</option>
-              <option value="jantar" className="bg-white text-indigo-950 font-bold">Jantar</option>
-              <option value="lanche" className="bg-white text-indigo-950 font-bold">Lanche</option>
+              <option value="café" className="bg-white text-indigo-950 font-bold">
+                Café da Manhã
+              </option>
+              <option value="almoço" className="bg-white text-indigo-950 font-bold">
+                Almoço
+              </option>
+              <option value="jantar" className="bg-white text-indigo-950 font-bold">
+                Jantar
+              </option>
+              <option value="lanche" className="bg-white text-indigo-950 font-bold">
+                Lanche
+              </option>
             </Select>
             <Input
               type="number"
@@ -67,18 +84,29 @@ export const SaudeAlimentacaoRoute: React.FC = () => {
               className="border-2 border-indigo-950 text-xs font-bold bg-white text-indigo-950 placeholder:text-slate-400"
             />
           </div>
-          <Button type="submit" variant="emerald" className="w-full border-3 border-indigo-950 font-black text-xs">
+          <Button
+            type="submit"
+            variant="emerald"
+            className="w-full border-3 border-indigo-950 font-black text-xs"
+          >
             <Apple className="w-4 h-4 mr-1 stroke-[3]" /> Salvar Refeição
           </Button>
         </form>
 
         <div className="space-y-2">
-          <h3 className="text-xs font-black text-indigo-950 uppercase tracking-wider">Refeições Registradas:</h3>
+          <h3 className="text-xs font-black text-indigo-950 uppercase tracking-wider">
+            Refeições Registradas:
+          </h3>
           {meals.map((m) => (
-            <div key={m.id} className="p-3 bg-slate-50 border-2 border-indigo-950 rounded-2xl flex justify-between items-center text-xs font-black">
+            <div
+              key={m.id}
+              className="p-3 bg-slate-50 border-2 border-indigo-950 rounded-2xl flex justify-between items-center text-xs font-black"
+            >
               <div>
                 <p className="text-indigo-950">{m.name}</p>
-                <p className="text-[10px] text-slate-400 capitalize">{m.type} • {m.time}</p>
+                <p className="text-[10px] text-slate-400 capitalize">
+                  {m.type} • {m.time}
+                </p>
               </div>
               <span className="text-emerald-600 font-extrabold">{m.calories} kcal</span>
             </div>

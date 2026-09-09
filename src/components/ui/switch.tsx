@@ -16,13 +16,13 @@ export const Switch: React.FC<SwitchProps> = ({ checked, onCheckedChange, classN
     className={cn(
       "inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none",
       checked ? "bg-blue-600" : "bg-slate-800",
-      className
+      className,
     )}
   >
     <span
       className={cn(
         "pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform",
-        checked ? "translate-x-5" : "translate-x-0"
+        checked ? "translate-x-5" : "translate-x-0",
       )}
     />
   </button>

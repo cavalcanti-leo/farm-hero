@@ -1,13 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { AppTheme, ThemeConfig, getThemeConfig, THEMES_LIST } from "./themes";
 
-export type AppTheme = "classic" | "light" | "dark";
+export type { AppTheme, ThemeConfig };
 
 interface ThemeContextValue {
   theme: AppTheme;
   setTheme: (t: AppTheme) => void;
+  config: ThemeConfig;
   isDark: boolean;
   isLight: boolean;
   isClassic: boolean;
+  isEmerald: boolean;
+  isSunset: boolean;
+  isBrutalist: boolean;
+  isOcean: boolean;
+  isBerry: boolean;
+  isRoseGold: boolean;
+
   // Dynamic CSS classes helper
   pageBgClass: string;
   cardBgClass: string;
@@ -15,20 +24,75 @@ interface ThemeContextValue {
   buttonClass: string;
   textPrimaryClass: string;
   textSecondaryClass: string;
+  accentBadgeClass: string;
+  bannerBgClass: string;
+  bgStyle: React.CSSProperties;
+
+  // Fully-synced UI Container themes (Web & Mobile)
+  statusBarBg: string;
+  statusBarText: string;
+  bottomNavBg: string;
+  bottomNavText: string;
+  bottomNavActiveBg: string;
+  bottomNavActiveText: string;
+  desktopSidebarBg: string;
+  desktopSidebarBorder: string;
+  desktopSidebarText: string;
+  desktopHeaderBg: string;
+  desktopHeaderBorder: string;
+  desktopHeaderText: string;
+  desktopMainBg: string;
+  inputBg: string;
+  inputBorder: string;
+  inputText: string;
+  inputPlaceholder: string;
+  navItemActiveClass: string;
 }
+
+const defaultConfig = getThemeConfig("classic");
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: "classic",
   setTheme: () => {},
+  config: defaultConfig,
   isDark: false,
   isLight: false,
   isClassic: true,
-  pageBgClass: "bg-gradient-to-b from-cyan-300 via-cyan-200 to-purple-50 text-slate-900",
-  cardBgClass: "bg-white",
-  cardBorderClass: "border-4 border-indigo-950 shadow-[4px_4px_0px_#1e1b4b]",
-  buttonClass: "bg-white text-purple-700 border-4 border-indigo-950 shadow-[3px_3px_0px_#1e1b4b]",
-  textPrimaryClass: "text-slate-900",
-  textSecondaryClass: "text-slate-500",
+  isEmerald: false,
+  isSunset: false,
+  isBrutalist: false,
+  isOcean: false,
+  isBerry: false,
+  isRoseGold: false,
+
+  pageBgClass: defaultConfig.pageBgClass,
+  cardBgClass: defaultConfig.cardBgClass,
+  cardBorderClass: defaultConfig.cardBorderClass,
+  buttonClass: defaultConfig.buttonClass,
+  textPrimaryClass: defaultConfig.textPrimaryClass,
+  textSecondaryClass: defaultConfig.textSecondaryClass,
+  accentBadgeClass: defaultConfig.accentBadgeClass,
+  bannerBgClass: defaultConfig.bannerBgClass,
+  bgStyle: defaultConfig.bgStyle,
+
+  statusBarBg: defaultConfig.statusBarBg,
+  statusBarText: defaultConfig.statusBarText,
+  bottomNavBg: defaultConfig.bottomNavBg,
+  bottomNavText: defaultConfig.bottomNavText,
+  bottomNavActiveBg: defaultConfig.bottomNavActiveBg,
+  bottomNavActiveText: defaultConfig.bottomNavActiveText,
+  desktopSidebarBg: defaultConfig.desktopSidebarBg,
+  desktopSidebarBorder: defaultConfig.desktopSidebarBorder,
+  desktopSidebarText: defaultConfig.desktopSidebarText,
+  desktopHeaderBg: defaultConfig.desktopHeaderBg,
+  desktopHeaderBorder: defaultConfig.desktopHeaderBorder,
+  desktopHeaderText: defaultConfig.desktopHeaderText,
+  desktopMainBg: defaultConfig.desktopMainBg,
+  inputBg: defaultConfig.inputBg,
+  inputBorder: defaultConfig.inputBorder,
+  inputText: defaultConfig.inputText,
+  inputPlaceholder: defaultConfig.inputPlaceholder,
+  navItemActiveClass: defaultConfig.navItemActiveClass,
 });
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -41,61 +105,62 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem("farmhero_theme", t);
   };
 
+  const config = getThemeConfig(theme);
+
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute("data-theme", theme);
-    if (theme === "dark") {
+    if (config.isDark) {
       root.classList.add("dark");
     } else {
       root.classList.remove("dark");
     }
-  }, [theme]);
-
-  const isDark = theme === "dark";
-  const isLight = theme === "light";
-  const isClassic = theme === "classic";
-
-  const pageBgClass = isDark
-    ? "bg-slate-950 text-white min-h-full"
-    : isLight
-    ? "bg-slate-100 text-slate-900 min-h-full"
-    : "bg-gradient-to-b from-cyan-300 via-cyan-200 to-purple-50 text-slate-900 min-h-full";
-
-  const cardBgClass = isDark
-    ? "bg-slate-900 text-white"
-    : isLight
-    ? "bg-white text-slate-900"
-    : "bg-white text-slate-900";
-
-  const cardBorderClass = isDark
-    ? "border-2 border-slate-800 shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
-    : isLight
-    ? "border-2 border-slate-200 shadow-md"
-    : "border-4 border-indigo-950 shadow-[4px_4px_0px_#1e1b4b]";
-
-  const buttonClass = isDark
-    ? "bg-purple-600 hover:bg-purple-500 text-white border-2 border-purple-800 shadow-md"
-    : isLight
-    ? "bg-purple-600 hover:bg-purple-700 text-white border-2 border-purple-700 shadow-sm"
-    : "bg-white hover:bg-purple-50 text-purple-700 border-4 border-indigo-950 shadow-[3px_3px_0px_#1e1b4b]";
-
-  const textPrimaryClass = isDark ? "text-white" : "text-indigo-950";
-  const textSecondaryClass = isDark ? "text-slate-400" : isLight ? "text-slate-500" : "text-slate-600";
+  }, [theme, config.isDark]);
 
   return (
     <ThemeContext.Provider
       value={{
         theme,
         setTheme,
-        isDark,
-        isLight,
-        isClassic,
-        pageBgClass,
-        cardBgClass,
-        cardBorderClass,
-        buttonClass,
-        textPrimaryClass,
-        textSecondaryClass,
+        config,
+        isDark: config.isDark,
+        isLight: theme === "light",
+        isClassic: theme === "classic",
+        isEmerald: theme === "emerald",
+        isSunset: theme === "sunset",
+        isBrutalist: theme === "brutalist",
+        isOcean: theme === "ocean",
+        isBerry: theme === "berry",
+        isRoseGold: theme === "rose_gold",
+
+        pageBgClass: config.pageBgClass,
+        cardBgClass: config.cardBgClass,
+        cardBorderClass: config.cardBorderClass,
+        buttonClass: config.buttonClass,
+        textPrimaryClass: config.textPrimaryClass,
+        textSecondaryClass: config.textSecondaryClass,
+        accentBadgeClass: config.accentBadgeClass,
+        bannerBgClass: config.bannerBgClass,
+        bgStyle: config.bgStyle,
+
+        statusBarBg: config.statusBarBg,
+        statusBarText: config.statusBarText,
+        bottomNavBg: config.bottomNavBg,
+        bottomNavText: config.bottomNavText,
+        bottomNavActiveBg: config.bottomNavActiveBg,
+        bottomNavActiveText: config.bottomNavActiveText,
+        desktopSidebarBg: config.desktopSidebarBg,
+        desktopSidebarBorder: config.desktopSidebarBorder,
+        desktopSidebarText: config.desktopSidebarText,
+        desktopHeaderBg: config.desktopHeaderBg,
+        desktopHeaderBorder: config.desktopHeaderBorder,
+        desktopHeaderText: config.desktopHeaderText,
+        desktopMainBg: config.desktopMainBg,
+        inputBg: config.inputBg,
+        inputBorder: config.inputBorder,
+        inputText: config.inputText,
+        inputPlaceholder: config.inputPlaceholder,
+        navItemActiveClass: config.navItemActiveClass,
       }}
     >
       {children}
@@ -104,3 +169,4 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 };
 
 export const useTheme = () => useContext(ThemeContext);
+export { THEMES_LIST, getThemeConfig };

@@ -34,35 +34,31 @@ const Tabs: React.FC<TabsProps> = ({
       }
       onValueChange?.(newValue);
     },
-    [controlledValue, onValueChange]
+    [controlledValue, onValueChange],
   );
 
   return (
-    <TabsContext.Provider
-      value={{ value: currentValue, onValueChange: handleValueChange }}
-    >
+    <TabsContext.Provider value={{ value: currentValue, onValueChange: handleValueChange }}>
       <div className={cn("w-full space-y-4", className)}>{children}</div>
     </TabsContext.Provider>
   );
 };
 
-const TabsList = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "inline-flex items-center justify-center rounded-xl bg-slate-900/90 p-1.5 text-slate-400 border border-slate-800 flex-wrap gap-1",
-      className
-    )}
-    {...props}
-  />
-));
+const TabsList = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "inline-flex items-center justify-center rounded-xl bg-slate-900/90 p-1.5 text-slate-400 border border-slate-800 flex-wrap gap-1",
+        className,
+      )}
+      {...props}
+    />
+  ),
+);
 TabsList.displayName = "TabsList";
 
-interface TabsTriggerProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface TabsTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   value: string;
 }
 
@@ -83,14 +79,14 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
           isActive
             ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md font-semibold"
             : "hover:bg-slate-800/80 hover:text-slate-200 text-slate-400",
-          className
+          className,
         )}
         {...props}
       >
         {children}
       </button>
     );
-  }
+  },
 );
 TabsTrigger.displayName = "TabsTrigger";
 
@@ -110,14 +106,14 @@ const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps>(
         ref={ref}
         className={cn(
           "mt-2 ring-offset-background focus-visible:outline-none animate-in fade-in-50 duration-300",
-          className
+          className,
         )}
         {...props}
       >
         {children}
       </div>
     );
-  }
+  },
 );
 TabsContent.displayName = "TabsContent";
 
